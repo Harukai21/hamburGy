@@ -8,8 +8,12 @@ const app = express();
 app.use(bodyParser.json());
 
 const VERIFY_TOKEN = 'pagebot';
-
 const PAGE_ACCESS_TOKEN = fs.readFileSync('token.txt', 'utf8').trim();
+
+// Handle root route
+app.get('/', (req, res) => {
+  res.send('Welcome to the Webhook Server');
+});
 
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
