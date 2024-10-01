@@ -3,6 +3,7 @@ const path = require('path');
 const { sendMessage } = require('./sendMessage');
 
 const commands = new Map();
+const prefix = '/'; // Set your desired prefix
 
 // Load all command modules dynamically
 const commandFiles = fs.readdirSync(path.join(__dirname, '../commands')).filter(file => file.endsWith('.js'));
@@ -15,7 +16,9 @@ async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
   const messageText = event.message.text.toLowerCase();
 
-  const args = messageText.split(' ');
+  if (!messageText.startsWith(prefix)) return; // Ignore messages without the prefix
+
+  const args = messageText.slice(prefix.length).trim().split(' ');
   const commandName = args.shift();
 
   if (commands.has(commandName)) {
