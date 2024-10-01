@@ -9,25 +9,38 @@ const prefix = '/'; // Set your desired prefix
 const commandFiles = fs.readdirSync(path.join(__dirname, '../commands')).filter(file => file.endsWith('.js'));
 for (const file of commandFiles) {
   const command = require(`../commands/${file}`);
-  commands.set(command.name, command);
+  commands.set(command.name.toLowerCase(), command); // Ensure command names are stored in lowercase
 }
 
 async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
-  const messageText = event.message.text.toLowerCase();
+  const messageText = event.message.text.trim();
 
-  if (!messageText.startsWith(prefix)) return; // Ignore messages without the prefix
+  // Check if the message starts with the command prefix
+  if (messageText.startsWith(prefix)) {
+    const args = messageText.slice(prefix.length).split(' ');
+    const commandName = args.shift().toLowerCase();
 
-  const args = messageText.slice(prefix.length).trim().split(' ');
-  const commandName = args.shift();
+    if (commands.has(commandName)) {
+      const command = commands.get(commandName);
+      try {
+        await command.execute(senderId, args, pageAccessToken, sendMessage);
+      } catch (error) {
+        console.error(`Error executing command ${commandName}:`, error);
+        sendMessage(senderId, { text: 'There was an error executing that command.' }, pageAccessToken);
+      }
+    }
+    return; // Exit after handling a command with the prefix
+  }
 
-  if (commands.has(commandName)) {
-    const command = commands.get(commandName);
+  // If the message doesn't start with the prefix, handle it as "Ai" by default
+  const aiCommand = commands.get('Ai');
+  if (aiCommand) {
     try {
-      await command.execute(senderId, args, pageAccessToken, sendMessage);
+      await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
     } catch (error) {
-      console.error(`Error executing command ${commandName}:`, error);
-      sendMessage(senderId, { text: 'There was an error executing that command.' }, pageAccessToken);
+      console.error('Error executing Ai command:', error);
+      sendMessage(senderId, { text: 'There was an error processing your request.' }, pageAccessToken);
     }
   }
 }
