@@ -34,7 +34,7 @@ async function handleMessage(event, pageAccessToken) {
   }
 
   // If the message doesn't start with the prefix, handle it as "Ai" by default
-  const aiCommand = commands.get('Ai');
+  const aiCommand = commands.get('ai');
   if (aiCommand) {
     try {
       await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
