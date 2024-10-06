@@ -1,9 +1,6 @@
 const { Client } = require("youtubei");
 const { ytdown } = require("nayan-media-downloader");
 const axios = require('axios');
-const fs = require('fs-extra');
-const path = require('path');
-const FormData = require('form-data');
 
 const youtube = new Client();
 
@@ -38,37 +35,17 @@ module.exports = {
           const videoData = videoInfo.data;
           const videoDownloadUrl = videoData.video;
 
-          const cachePath = path.join(__dirname, "cache", `music.mp3`);
-          await downloadVideo(videoDownloadUrl, cachePath);
-
-          // Upload the audio file to Facebook
-          const formData = new FormData();
-          formData.append('message', JSON.stringify({
-            'attachment': {
-              'type': 'audio',
-              'payload': { 'is_reusable': true }
-            }
-          }));
-          formData.append('filedata', fs.createReadStream(cachePath));
-
-          const uploadResponse = await axios.post(`https://graph.facebook.com/v17.0/me/message_attachments?access_token=${pageAccessToken}`, formData, {
-            headers: formData.getHeaders()
-          });
-
-          const attachmentId = uploadResponse.data.attachment_id;
-
-          // Send the audio file using attachment_id
+          // Send the audio file using the video URL directly
           sendMessage(senderId, {
             attachment: {
               type: 'audio',
               payload: {
-                attachment_id: attachmentId
+                url: videoDownloadUrl,
+                is_reusable: true
               }
             }
           }, pageAccessToken);
 
-          // Optionally delete the file after sending
-          fs.unlinkSync(cachePath);
         } else {
           sendMessage(senderId, { text: "Failed to download the audio." }, pageAccessToken);
         }
@@ -84,19 +61,3 @@ module.exports = {
     }
   }
 };
-
-// Helper function for downloading video
-async function downloadVideo(url, filePath) {
-  const writer = fs.createWriteStream(filePath);
-  const response = await axios({
-    url,
-    method: 'GET',
-    responseType: 'stream'
-  });
-
-  return new Promise((resolve, reject) => {
-    response.data.pipe(writer);
-    writer.on('finish', resolve);
-    writer.on('error', reject);
-  });
-}
