@@ -21,6 +21,7 @@
     "fs-extra": "^11.2.0",
     "form-data": "^4.0.0",
     "groq-sdk": "^0.6.1",
+    "llyrics": "^1.1.7",
     "nayan-media-downloader": "^2.5.5",
     "node-fetch": "^3.3.2",
     "request": "^2.88.2",
