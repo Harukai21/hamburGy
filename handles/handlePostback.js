@@ -4,7 +4,7 @@ function handlePostback(event, pageAccessToken) {
   const senderId = event.sender.id;
   const payload = event.postback.payload;
 
-  if (payload === 'COMMANDS') {
+  if (payload === '/help') {
     const messageWithQuickReplies = {
       text: 'Choose an action:',
       quick_replies: [
@@ -15,8 +15,8 @@ function handlePostback(event, pageAccessToken) {
         },
         {
           content_type: 'text',
-          title: 'ai',
-          payload: 'listens to incoming messages'
+          title: '/spotify',
+          payload: 'search for songs'
         },
         {
           content_type: 'text',
