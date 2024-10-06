@@ -2,7 +2,7 @@ const axios = require('axios');
 
 module.exports = {
   name: 'lyrics',
-  description: 'Fetch song lyrics',
+  description: '/lyrics <SongTitle>',
   author: 'Biru',
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const query = args.join(' ');
