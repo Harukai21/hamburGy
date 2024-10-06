@@ -7,7 +7,7 @@ const MAX_MESSAGE_LENGTH = 2000; // Facebook Messenger message limit
 
 module.exports = {
   name: 'ai',
-  description: 'Listens to any incoming message and interacts with Groq AI',
+  description: 'Listens to any incoming messages, no need command name or prefix.',
   author: 'Biru',
 
   async execute(senderId, messageText, pageAccessToken, sendMessage) {
