@@ -11,11 +11,9 @@ module.exports = {
       const apiUrl = `https://spotifydl-api-54n8.onrender.com/spotifydl?search=${encodeURIComponent(query)}`;
       const response = await axios.get(apiUrl);
 
-      // Extract the Spotify link from the response
-      const spotifyLink = response.data.result;
+      const spotifyLink = response.data.track.downloadLink;
 
       if (spotifyLink) {
-        // Send the MP3 file as an attachment
         sendMessage(senderId, {
           attachment: {
             type: 'audio',
