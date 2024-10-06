@@ -16,7 +16,7 @@ module.exports = {
       console.log("User's Message:", messageText);
 
       // Indicate that the bot is processing the request
-      sendMessage(senderId, { text: 'Processing your request...' }, pageAccessToken);
+      sendMessage(senderId, { text: '' }, pageAccessToken);
 
       // Initialize user history if not present
       let userHistory = messageHistory.get(senderId) || [];
