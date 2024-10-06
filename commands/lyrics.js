@@ -32,15 +32,19 @@ module.exports = {
 
         // Optionally send an image if available
         if (response.image) {
+          // Handle any type of image URL
           sendMessage(senderId, {
             attachment: {
               type: 'image',
               payload: {
-                url: response.image,
-                is_reusable: true
+                url: response.image,   // URL provided from the response
+                is_reusable: true      // Mark as reusable, if necessary
               }
             }
-          }, pageAccessToken);
+          }, pageAccessToken)
+          .catch(err => {
+            console.error('Error sending image:', err);
+          });
         }
       } else {
         console.error('Error: No lyrics found in the response.');
