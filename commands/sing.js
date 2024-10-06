@@ -6,7 +6,7 @@ const youtube = new Client();
 
 module.exports = {
   name: "sing",
-  description: "Automatically play music via search keyword",
+  description: "/sing <songTitle>",
   author: "Biru (modified)",
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
