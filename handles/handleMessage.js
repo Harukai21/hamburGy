@@ -15,9 +15,15 @@ for (const file of commandFiles) {
 async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
 
+  // Ensure event.message exists before accessing its properties
+  if (!event.message) {
+    console.error('No message found in event:', event);
+    return;
+  }
+
   // Check if the message is text or an attachment (e.g., image)
   const messageText = event.message.text ? event.message.text.trim() : null;
-  const attachments = event.message.attachments ? event.message.attachments : [];
+  const attachments = event.message.attachments || []; // Default to an empty array if no attachments
 
   if (messageText) {
     // Check if the message starts with the command prefix
@@ -52,8 +58,8 @@ async function handleMessage(event, pageAccessToken) {
     const aiCommand = commands.get('ai');
     if (aiCommand) {
       try {
-        const messageType = 'image'; // Assuming it's an image, but you can extend for other types
-        const attachment = attachments[0]; // Handling first attachment only; extend if needed
+        const messageType = 'image'; // Assuming it's an image; adjust if needed
+        const attachment = attachments[0]; // Handle the first attachment only
         await aiCommand.execute(senderId, '', pageAccessToken, sendMessage, messageType, attachment);
       } catch (error) {
         console.error('Error processing attachment:', error);
