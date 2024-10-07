@@ -1,7 +1,7 @@
 const { sendMessage } = require('./sendMessage');
 
 // Define the URL for following and sharing the page
-const PAGE_ID = 'your-page-id-here';  // Replace with your actual Facebook Page ID
+const PAGE_ID = '303798532824975';  // Replace with your actual Facebook Page ID
 const followPageUrl = `https://www.facebook.com/${PAGE_ID}`;
 const sharePageUrl = `https://www.facebook.com/sharer/sharer.php?u=https://www.facebook.com/${PAGE_ID}`;
 
@@ -9,7 +9,7 @@ function handlePostback(event, pageAccessToken) {
   const senderId = event.sender.id;
   const payload = event.postback.payload;
 
-  if (payload === '/help') {
+  if (payload === 'ACTIONS') {
     const messageWithQuickReplies = {
       text: 'Choose an action:',
       quick_replies: [
