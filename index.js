@@ -1,67 +1,62 @@
-
+const express = require('express');
+const bodyParser = require('body-parser');
 const fs = require('fs');
-const path = require('path');
-const { sendMessage } = require('./sendMessage');
+const { handleMessage } = require('./handles/handleMessage');
+const { handlePostback } = require('./handles/handlePostback');
 
-const commands = new Map();
-const prefix = '/'; // Set your desired prefix
+const app = express();
+app.use(bodyParser.json());
 
-// Load all command modules dynamically
-const commandFiles = fs.readdirSync(path.join(__dirname, '../commands')).filter(file => file.endsWith('.js'));
-for (const file of commandFiles) {
-  const command = require(`../commands/${file}`);
-  commands.set(command.name.toLowerCase(), command); // Ensure command names are stored in lowercase
-}
+const VERIFY_TOKEN = 'pagebot';
+const PAGE_ACCESS_TOKEN = fs.readFileSync('token.txt', 'utf8').trim();
 
-async function handleMessage(event, pageAccessToken) {
-  const senderId = event.sender.id;
-  const messageText = event.message && event.message.text ? event.message.text.trim() : null; // Ensure message exists before accessing text
-  const attachments = event.message && event.message.attachments ? event.message.attachments : [];
+// Handle root route
+app.get('/', (req, res) => {
+  res.send('Welcome to the Webhook Server');
+});
 
-  // If there's an attachment, handle it as an image or other file type
-  if (attachments.length > 0) {
-    const attachment = attachments[0]; // Handling the first attachment, you can expand this for multiple
-    const aiCommand = commands.get('ai');
-    if (aiCommand) {
-      try {
-        await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage, 'image', attachment); // 'image' can be replaced with dynamic type checking
-      } catch (error) {
-        console.error('Error executing Ai command with attachment:', error);
-        sendMessage(senderId, { text: 'There was an error processing your attachment.' }, pageAccessToken);
-      }
-    }
-    return; // Exit after handling the attachment
-  }
+app.get('/webhook', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
 
-  // Check if the message starts with the command prefix
-  if (messageText && messageText.startsWith(prefix)) {
-    const args = messageText.slice(prefix.length).split(' ');
-    const commandName = args.shift().toLowerCase();
-
-    if (commands.has(commandName)) {
-      const command = commands.get(commandName);
-      try {
-        await command.execute(senderId, args, pageAccessToken, sendMessage);
-      } catch (error) {
-        console.error(`Error executing command ${commandName}:`, error);
-        sendMessage(senderId, { text: 'There was an error executing that command.' }, pageAccessToken);
-      }
-    }
-    return; // Exit after handling a command with the prefix
-  }
-
-  // If the message doesn't start with the prefix, handle it as "Ai" by default
-  if (messageText) {
-    const aiCommand = commands.get('ai');
-    if (aiCommand) {
-      try {
-        await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
-      } catch (error) {
-        console.error('Error executing Ai command:', error);
-        sendMessage(senderId, { text: 'There was an error processing your request.' }, pageAccessToken);
-      }
+  if (mode && token) {
+    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+      console.log('WEBHOOK_VERIFIED');
+      res.status(200).send(challenge);
+    } else {
+      res.sendStatus(403);
     }
   }
-}
+});
 
-module.exports = { handleMessage };
+app.post('/webhook', (req, res) => {
+  const body = req.body;
+
+  if (body.object === 'page') {
+    body.entry.forEach(entry => {
+      entry.messaging.forEach(event => {
+        if (event.message && (event.message.text || event.message.attachments)) {
+          handleMessage(event, PAGE_ACCESS_TOKEN);  // Pass to handleMessage when text or attachments exist
+        } else if (event.postback) {
+          handlePostback(event, PAGE_ACCESS_TOKEN);
+        }
+      });
+    });
+
+    res.status(200).send('EVENT_RECEIVED');
+  } else {
+    res.sendStatus(404);
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
+// Set interval to restart the system every 8 hours
+setInterval(() => {
+  console.log('Restarting the server...');
+  process.exit(0);  // Exit with success code
+}, 8 * 60 * 60 * 1000);  // 8 hours in milliseconds
