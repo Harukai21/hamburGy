@@ -56,7 +56,7 @@ async function getG4FResponse(userHistory) {
   try {
     const options = {
       provider: g4f.providers.GPT, // Using GPT-3.5 Turbo
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4',
       debug: true,
     };
 
