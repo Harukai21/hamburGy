@@ -1,6 +1,6 @@
 const request = require('request');
 
-function sendTypingIndicator(senderId, pageAccessToken, action) {
+function sendAction(senderId, pageAccessToken, action) {
   const payload = {
     recipient: { id: senderId },
     sender_action: action
@@ -13,7 +13,7 @@ function sendTypingIndicator(senderId, pageAccessToken, action) {
     json: payload,
   }, (error, response, body) => {
     if (error) {
-      console.error('Error sending typing indicator:', error);
+      console.error(`Error sending ${action}:`, error);
     } else if (response.body.error) {
       console.error('Error response:', response.body.error);
     } else {
@@ -45,10 +45,13 @@ function sendMessage(senderId, message, pageAccessToken) {
     payload.message.quick_replies = message.quick_replies;
   }
 
-  // Send typing indicator first
-  sendTypingIndicator(senderId, pageAccessToken, 'typing_on');
+  // 1. Mark the message as "seen" immediately
+  sendAction(senderId, pageAccessToken, 'mark_seen');
 
-  // Delay sending the actual message to simulate typing
+  // 2. Send typing indicator immediately after receiving the message
+  sendAction(senderId, pageAccessToken, 'typing_on');
+
+  // 3. Delay sending the actual message to simulate typing
   setTimeout(() => {
     request({
       url: 'https://graph.facebook.com/v13.0/me/messages',
@@ -64,10 +67,10 @@ function sendMessage(senderId, message, pageAccessToken) {
         console.log('Message sent successfully:', body);
       }
 
-      // Turn off typing indicator after sending the message
-      sendTypingIndicator(senderId, pageAccessToken, 'typing_off');
+      // 4. Turn off typing indicator after sending the message
+      sendAction(senderId, pageAccessToken, 'typing_off');
     });
-  }, 1000); // 1-second delay to simulate typing
+  }, 2000); // 2-second delay to simulate typing
 }
 
 module.exports = { sendMessage };
