@@ -21,7 +21,7 @@ async function handleMessage(event, pageAccessToken) {
     return;
   }
 
-  // Check if the message is text or an attachment (e.g., image)
+  // Safely handle both text and attachments
   const messageText = event.message.text ? event.message.text.trim() : null;
   const attachments = event.message.attachments || []; // Default to an empty array if no attachments
 
