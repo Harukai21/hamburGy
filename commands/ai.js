@@ -1,8 +1,11 @@
 const { G4F } = require("g4f");
 const Groq = require('groq-sdk');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const fs = require('fs');
 
 const g4f = new G4F();
 const groq = new Groq({ apiKey: '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' });
+const genAI = new GoogleGenerativeAI("AIzaSyBcyNtgDliBoVFvsHueC1NPBDCucznkwUk");
 
 const messageHistory = new Map();
 const MAX_MESSAGE_LENGTH = 2000; // Facebook Messenger message limit
@@ -12,7 +15,7 @@ module.exports = {
   description: 'Listens to any incoming messages, no need command name or prefix.',
   author: 'Biru',
 
-  async execute(senderId, messageText, pageAccessToken, sendMessage) {
+  async execute(senderId, messageText, pageAccessToken, sendMessage, messageType, attachment) {
     try {
       // Log the initial user message
       console.log("User's Message:", messageText);
@@ -25,14 +28,21 @@ module.exports = {
       if (userHistory.length === 0) {
         userHistory.push({ role: 'system', content: 'You are a helpful and kind assistant that answers everything.' });
       }
-      userHistory.push({ role: 'user', content: messageText });
 
-      // Attempt to get a response from G4F API using a simple call
-      let responseMessage = await getG4FResponse(userHistory);
+      let responseMessage = '';
 
-      // If G4F fails, fallback to Groq API
-      if (!responseMessage) {
-        responseMessage = await getGroqResponse(userHistory);
+      if (messageType === 'image' && attachment) {
+        // Handle image input using Google Generative AI
+        responseMessage = await handleImageWithGoogleAI(attachment);
+      } else {
+        // Handle text input using G4F API
+        userHistory.push({ role: 'user', content: messageText });
+        responseMessage = await getG4FResponse(userHistory);
+
+        // Fallback to Groq if G4F fails
+        if (!responseMessage) {
+          responseMessage = await getGroqResponse(userHistory);
+        }
       }
 
       // Append the assistant's response to the history
@@ -50,6 +60,31 @@ module.exports = {
     }
   }
 };
+
+// Function to handle image input using Google Generative AI
+async function handleImageWithGoogleAI(attachment) {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // Convert image to base64
+    const image = {
+      inlineData: {
+        data: Buffer.from(fs.readFileSync(attachment)).toString("base64"),
+        mimeType: "image/jpeg" // Assuming image type is JPEG; adjust accordingly if needed
+      }
+    };
+
+    // Prompt for image analysis
+    const prompt = "Can you analyze this image and tell me if it looks store-bought or homemade?";
+    const result = await model.generateContent([prompt, image]);
+
+    // Return the result from the Google Generative AI response
+    return result.response.text();
+  } catch (error) {
+    console.error('Error communicating with Google Generative AI:', error.message);
+    return "Sorry, I couldn't analyze the image. Please try again.";
+  }
+}
 
 // Function to get a response from the G4F API using a simple call
 async function getG4FResponse(userHistory) {
