@@ -21,8 +21,8 @@ async function handleMessage(event, pageAccessToken) {
     return;
   }
 
-  // Safely handle both text and attachments
-  const messageText = event.message.text ? event.message.text.trim() : null;
+  // Safely handle text and attachments
+  const messageText = event.message.text && typeof event.message.text === 'string' ? event.message.text.trim() : null;
   const attachments = event.message.attachments || []; // Default to an empty array if no attachments
 
   if (messageText) {
@@ -58,7 +58,7 @@ async function handleMessage(event, pageAccessToken) {
     const aiCommand = commands.get('ai');
     if (aiCommand) {
       try {
-        const messageType = 'image'; // Assuming it's an image; adjust if needed
+        const messageType = attachments[0].type || 'attachment'; // Get attachment type
         const attachment = attachments[0]; // Handle the first attachment only
         await aiCommand.execute(senderId, '', pageAccessToken, sendMessage, messageType, attachment);
       } catch (error) {
