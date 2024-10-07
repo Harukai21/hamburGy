@@ -14,8 +14,8 @@ for (const file of commandFiles) {
 
 async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
-  const messageText = event.message.text ? event.message.text.trim() : null;
-  const attachments = event.message.attachments || [];
+  const messageText = event.message && event.message.text ? event.message.text.trim() : null; // Ensure message exists before accessing text
+  const attachments = event.message && event.message.attachments ? event.message.attachments : [];
 
   // If there's an attachment, handle it as an image or other file type
   if (attachments.length > 0) {
