@@ -11,7 +11,7 @@ module.exports = {
       // Call the llyrics package to find the song lyrics using Genius API
       const response = await find({
         song: query,
-        engine: 'genius',          // Using Genius as the engine
+        engine: 'musixmatch',          // Using Genius as the engine
         geniusApiKey: 'TUoXsviG2F-cP3lzP5VtzZ3i1IjsPqHabEeqXq7LugC_1F7e0h6yZFrES7ihiaNc',
         forceSearch: true          // Enable retry with other engines if search fails
       });
