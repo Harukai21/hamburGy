@@ -13,16 +13,15 @@ const MAX_MESSAGE_LENGTH = 2000; // Facebook Messenger message limit
 
 module.exports = {
   name: 'ai',
-  description: 'Listens to any incoming messages, no need command name or prefix.',
+  description: 'Listens to any incoming messages, no need for a command name or prefix.',
   author: 'Biru',
 
-  async execute(senderId, messageText, pageAccessToken, sendMessage, messageType, attachment) {
+  async execute(senderId, messageText, pageAccessToken, sendMessage, messageType = 'text', attachment = null) {
     try {
-      // Log the initial user message
-      console.log("User's Message:", messageText);
-
+      console.log("User's Message:", messageText || '[Attachment received]');
+      
       // Indicate that the bot is processing the request
-      sendMessage(senderId, { text: '' }, pageAccessToken);
+      sendMessage(senderId, { text: '...' }, pageAccessToken);
 
       // Initialize user history if not present
       let userHistory = messageHistory.get(senderId) || [];
@@ -35,7 +34,7 @@ module.exports = {
       if (messageType === 'image' && attachment) {
         // Handle image input
         responseMessage = await handleImageWithGoogleAI(attachment);
-      } else {
+      } else if (messageType === 'text' && messageText) {
         // Handle text input using G4F API
         userHistory.push({ role: 'user', content: messageText });
         responseMessage = await getG4FResponse(userHistory);
@@ -44,6 +43,8 @@ module.exports = {
         if (!responseMessage) {
           responseMessage = await getGroqResponse(userHistory);
         }
+      } else {
+        responseMessage = "Sorry, I couldn't process your request. Please send a valid message or image.";
       }
 
       // Append the assistant's response to the history
@@ -73,7 +74,7 @@ async function handleImageWithGoogleAI(attachment) {
     const image = {
       inlineData: {
         data: imageBuffer.toString("base64"),
-        mimeType: "image/png" // Assuming image type is JPEG; adjust accordingly if needed
+        mimeType: "image/png" // Assuming image type is PNG; adjust accordingly
       }
     };
 
@@ -82,7 +83,7 @@ async function handleImageWithGoogleAI(attachment) {
     const result = await genAI.generateText({ prompt, images: [image] });
 
     // Return the result from the Google Generative AI response
-    return result.candidates[0].output || "Sorry, I couldn't analyze the image.";
+    return result.candidates[0]?.output || "Sorry, I couldn't analyze the image.";
   } catch (error) {
     console.error('Error handling image with Google Generative AI:', error.message);
     return "Sorry, I couldn't analyze the image. Please try again.";
@@ -125,7 +126,7 @@ async function getGroqResponse(userHistory) {
     // Collect the response message from the stream
     let responseMessage = '';
     for await (const chunk of chatCompletion) {
-      responseMessage += (chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content) || '';
+      responseMessage += (chunk.choices[0]?.delta?.content || '');
     }
     return responseMessage;
   } catch (error) {
