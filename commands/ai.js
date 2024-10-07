@@ -73,7 +73,7 @@ async function handleImageWithGoogleAI(attachment) {
     const image = {
       inlineData: {
         data: imageBuffer.toString("base64"),
-        mimeType: "image/jpeg" // Assuming image type is JPEG; adjust accordingly if needed
+        mimeType: "image/png" // Assuming image type is JPEG; adjust accordingly if needed
       }
     };
 
