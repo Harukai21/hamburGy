@@ -14,43 +14,30 @@ for (const file of commandFiles) {
 
 async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
-  const messageText = event.message && event.message.text ? event.message.text.trim() : null; // Ensure message exists before accessing text
-  const attachments = event.message && event.message.attachments ? event.message.attachments : [];
 
-  // If there's an attachment, handle it as an image or other file type
-  if (attachments.length > 0) {
-    const attachment = attachments[0]; // Handling the first attachment, you can expand this for multiple
-    const aiCommand = commands.get('ai');
-    if (aiCommand) {
-      try {
-        await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage, 'image', attachment); // 'image' can be replaced with dynamic type checking
-      } catch (error) {
-        console.error('Error executing Ai command with attachment:', error);
-        sendMessage(senderId, { text: 'There was an error processing your attachment.' }, pageAccessToken);
-      }
-    }
-    return; // Exit after handling the attachment
-  }
+  // Check if the message is text or an attachment (e.g., image)
+  const messageText = event.message.text ? event.message.text.trim() : null;
+  const attachments = event.message.attachments ? event.message.attachments : [];
 
-  // Check if the message starts with the command prefix
-  if (messageText && messageText.startsWith(prefix)) {
-    const args = messageText.slice(prefix.length).split(' ');
-    const commandName = args.shift().toLowerCase();
-
-    if (commands.has(commandName)) {
-      const command = commands.get(commandName);
-      try {
-        await command.execute(senderId, args, pageAccessToken, sendMessage);
-      } catch (error) {
-        console.error(`Error executing command ${commandName}:`, error);
-        sendMessage(senderId, { text: 'There was an error executing that command.' }, pageAccessToken);
-      }
-    }
-    return; // Exit after handling a command with the prefix
-  }
-
-  // If the message doesn't start with the prefix, handle it as "Ai" by default
   if (messageText) {
+    // Check if the message starts with the command prefix
+    if (messageText.startsWith(prefix)) {
+      const args = messageText.slice(prefix.length).split(' ');
+      const commandName = args.shift().toLowerCase();
+
+      if (commands.has(commandName)) {
+        const command = commands.get(commandName);
+        try {
+          await command.execute(senderId, args, pageAccessToken, sendMessage);
+        } catch (error) {
+          console.error(`Error executing command ${commandName}:`, error);
+          sendMessage(senderId, { text: 'There was an error executing that command.' }, pageAccessToken);
+        }
+      }
+      return; // Exit after handling a command with the prefix
+    }
+
+    // If the message doesn't start with the prefix, handle it as "Ai" by default
     const aiCommand = commands.get('ai');
     if (aiCommand) {
       try {
@@ -58,6 +45,19 @@ async function handleMessage(event, pageAccessToken) {
       } catch (error) {
         console.error('Error executing Ai command:', error);
         sendMessage(senderId, { text: 'There was an error processing your request.' }, pageAccessToken);
+      }
+    }
+  } else if (attachments.length > 0) {
+    // Handle attachments (e.g., images)
+    const aiCommand = commands.get('ai');
+    if (aiCommand) {
+      try {
+        const messageType = 'image'; // Assuming it's an image, but you can extend for other types
+        const attachment = attachments[0]; // Handling first attachment only; extend if needed
+        await aiCommand.execute(senderId, '', pageAccessToken, sendMessage, messageType, attachment);
+      } catch (error) {
+        console.error('Error processing attachment:', error);
+        sendMessage(senderId, { text: 'There was an error processing your attachment.' }, pageAccessToken);
       }
     }
   }
