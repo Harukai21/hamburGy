@@ -75,7 +75,7 @@ async function handleImageWithGoogleAI(attachment) {
     };
 
     // Prompt for image analysis
-    const prompt = "Can you analyze this image and tell me if it looks store-bought or homemade?";
+    const prompt = "analyze the image";
     const result = await model.generateContent([prompt, image]);
 
     // Return the result from the Google Generative AI response
