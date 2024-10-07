@@ -2,6 +2,7 @@ const { G4F } = require("g4f");
 const Groq = require('groq-sdk');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs = require('fs');
+const axios = require('axios');
 
 const g4f = new G4F();
 const groq = new Groq({ apiKey: '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' });
@@ -32,7 +33,7 @@ module.exports = {
       let responseMessage = '';
 
       if (messageType === 'image' && attachment) {
-        // Handle image input using Google Generative AI
+        // Handle image input
         responseMessage = await handleImageWithGoogleAI(attachment);
       } else {
         // Handle text input using G4F API
@@ -64,26 +65,37 @@ module.exports = {
 // Function to handle image input using Google Generative AI
 async function handleImageWithGoogleAI(attachment) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Download the image from the attachment URL
+    const imageUrl = attachment.payload.url;
+    const imageBuffer = await downloadImage(imageUrl);
 
     // Convert image to base64
     const image = {
       inlineData: {
-        data: Buffer.from(fs.readFileSync(attachment)).toString("base64"),
+        data: imageBuffer.toString("base64"),
         mimeType: "image/jpeg" // Assuming image type is JPEG; adjust accordingly if needed
       }
     };
 
-    // Prompt for image analysis
-    const prompt = "analyze the image";
-    const result = await model.generateContent([prompt, image]);
+    // Analyze image with Google Generative AI
+    const prompt = "Analyze this image and describe it.";
+    const result = await genAI.generateText({ prompt, images: [image] });
 
     // Return the result from the Google Generative AI response
-    return result.response.text();
+    return result.candidates[0].output || "Sorry, I couldn't analyze the image.";
   } catch (error) {
-    console.error('Error communicating with Google Generative AI:', error.message);
+    console.error('Error handling image with Google Generative AI:', error.message);
     return "Sorry, I couldn't analyze the image. Please try again.";
   }
+}
+
+// Function to download the image from a URL
+async function downloadImage(url) {
+  const response = await axios({
+    url,
+    responseType: 'arraybuffer'
+  });
+  return Buffer.from(response.data, 'binary');
 }
 
 // Function to get a response from the G4F API using a simple call
