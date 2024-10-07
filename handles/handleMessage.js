@@ -21,7 +21,7 @@ async function handleMessage(event, pageAccessToken) {
     return;
   }
 
-  // Safely handle text and attachments
+  // Safely handle both text and attachments
   const messageText = event.message.text && typeof event.message.text === 'string' ? event.message.text.trim() : null;
   const attachments = event.message.attachments || []; // Default to an empty array if no attachments
 
@@ -66,6 +66,8 @@ async function handleMessage(event, pageAccessToken) {
         sendMessage(senderId, { text: 'There was an error processing your attachment.' }, pageAccessToken);
       }
     }
+  } else {
+    console.log('No text or attachments found in the event');
   }
 }
 
