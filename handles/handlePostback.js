@@ -1,5 +1,5 @@
 const { sendMessage } = require('./sendMessage');
-const singCommand = require('./commands/play');  // Import the sing command
+const singCommand = require('./play');  // Import the sing command
 
 // Define the URL for following and sharing the page
 const PAGE_ID = '303798532824975';  // Replace with your actual Facebook Page ID
