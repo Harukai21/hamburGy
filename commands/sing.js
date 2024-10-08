@@ -6,8 +6,9 @@ const youtube = new Client();
 
 module.exports = {
   name: "sing",
-  description: "/sing <songTitle>",
-  author: "Biru (modified)",
+  description: "downloads mp3 from youtube",
+  usage: '/sing <songTitle>',
+  author: "Biru",
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const searchQuery = args.join(" ");
