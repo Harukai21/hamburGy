@@ -16,39 +16,44 @@ function handlePostback(event, pageAccessToken) {
         {
           content_type: 'text',
           title: '/help',
-          payload: 'see the commands'
+          payload: 'HELP'  // Use a unique identifier
         },
         {
           content_type: 'text',
           title: '/follow',
-          payload: 'follow the page'
+          payload: 'FOLLOW_PAGE'  // Use a unique identifier
         },
         {
           content_type: 'text',
           title: '/share',
-          payload: 'share to other users'
+          payload: 'SHARE_PAGE'  // Use a unique identifier
         }
       ]
     };
 
     // Send the message with quick replies
     sendMessage(senderId, messageWithQuickReplies, pageAccessToken);
-  
-  } else if (payload === 'follow the page') {
+
+  } else if (payload === 'FOLLOW_PAGE') {
     // Send a message with the follow page link
     const followMessage = {
       text: `You can follow our page here: ${followPageUrl}`
     };
     sendMessage(senderId, followMessage, pageAccessToken);
 
-  } else if (payload === 'share to other users') {
+  } else if (payload === 'SHARE_PAGE') {
     // Send a message with the share link
     const shareMessage = {
       text: `Share our page with your friends: ${sharePageUrl}`
     };
     sendMessage(senderId, shareMessage, pageAccessToken);
 
+  } else if (payload === 'HELP') {
+    // Handle the help command
+    sendMessage(senderId, { text: "Here are some commands you can use: /help, /follow, /share" }, pageAccessToken);
+
   } else {
+    // Fallback response if payload is not recognized
     sendMessage(senderId, { text: `I'm not sure how to respond to that.` }, pageAccessToken);
   }
 }
