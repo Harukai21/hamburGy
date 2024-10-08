@@ -4,6 +4,7 @@ const path = require('path');
 module.exports = {
   name: 'help',
   description: 'Show available commands',
+  usage: '/help',
   author: 'System',
   execute(senderId, args, pageAccessToken, sendMessage) {
     const commandsDir = path.join(__dirname, '../commands');
@@ -11,7 +12,7 @@ module.exports = {
 
     const commands = commandFiles.map(file => {
       const command = require(path.join(commandsDir, file));
-      return `⟿ ${command.name}\n  - ${command.description}`;
+      return `⟿ ${command.name}\n  - ${command.description}\n - ${command.usage}`;
     });
 
     const totalCommands = commandFiles.length;
