@@ -2,7 +2,8 @@ const { find } = require('llyrics');
 
 module.exports = {
   name: 'lyrics',
-  description: '/lyrics <SongTitle>',
+  description: 'search for lyrics',
+  usage: '/lyrics <SongTitle>',
   author: 'Biru',
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const query = args.join(' ');
