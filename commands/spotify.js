@@ -2,8 +2,8 @@ const axios = require('axios');
 
 module.exports = {
   name: 'spotify',
-  description: '/spotify <SongTitle>',
-  usage: '/spotify',
+  description: 'downloads music from spotify.',
+  usage: '/spotify <title>',
   author: 'Biru',
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const query = args.join(' ');
