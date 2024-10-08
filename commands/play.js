@@ -2,6 +2,8 @@ const { Client } = require("youtubei");
 const { ytdown } = require("nayan-media-downloader");
 const youtube = new Client();
 
+let searchResultsCache = {};  // A simple cache to store search results by senderId
+
 module.exports = {
   name: "play",
   description: "/play <songTitle>",
@@ -23,39 +25,13 @@ module.exports = {
         return sendMessage(senderId, { text: "No results found. Please try again with a different keyword." }, pageAccessToken);
       }
 
-      // Select the top 3 results
+      // Select the top 3 results and store them in the cache
       const topResults = searchResults.items.slice(0, 3);
+      searchResultsCache[senderId] = topResults;  // Store the results by sender ID
 
-      // Prepare a message showing the top 3 video titles
-      let messageText = "Please choose a video:\n";
-      topResults.forEach((result, index) => {
-        messageText += `${index + 1}. ${result.title}\n`;
-      });
-
-      // Send the options to the user with buttons /1, /2, /3
-      const buttons = [
-        {
-          content_type: 'text',
-          title: '/1',
-          payload: JSON.stringify({ action: "select_video", videoIndex: 0, videoId: topResults[0].id?.videoId || topResults[0].id })
-        },
-        {
-          content_type: 'text',
-          title: '/2',
-          payload: JSON.stringify({ action: "select_video", videoIndex: 1, videoId: topResults[1].id?.videoId || topResults[1].id })
-        },
-        {
-          content_type: 'text',
-          title: '/3',
-          payload: JSON.stringify({ action: "select_video", videoIndex: 2, videoId: topResults[2].id?.videoId || topResults[2].id })
-        }
-      ];
-
-      // Send the video titles as text, followed by the buttons
-      sendMessage(senderId, {
-        text: messageText,
-        quick_replies: buttons
-      }, pageAccessToken);
+      // Send the options to the user
+      const message = `Please choose a video:\n1. ${topResults[0].title}\n2. ${topResults[1].title}\n3. ${topResults[2].title}`;
+      sendMessage(senderId, { text: message }, pageAccessToken);
 
     } catch (error) {
       console.error("Search Error:", error);
@@ -63,48 +39,44 @@ module.exports = {
     }
   },
 
-  // This function handles the postback when the user selects a video to download
-  async handlePostback(senderId, payload, pageAccessToken, sendMessage) {
+  // This function handles when the user selects a video by typing /1, /2, or /3
+  async handleSelection(senderId, selection, pageAccessToken, sendMessage) {
     try {
-      const { videoId } = JSON.parse(payload);
+      const videoIndex = parseInt(selection.replace('/', '')) - 1;
 
-      if (!videoId) {
-        return sendMessage(senderId, { text: "No valid video was selected." }, pageAccessToken);
+      // Check if the search results are available for the senderId
+      if (!searchResultsCache[senderId] || !searchResultsCache[senderId][videoIndex]) {
+        return sendMessage(senderId, { text: "No valid video selection found." }, pageAccessToken);
       }
 
-      // Send the "Downloading" message first
-      sendMessage(senderId, { text: `Downloading audio...` }, pageAccessToken);
+      const selectedVideo = searchResultsCache[senderId][videoIndex];
+      const videoId = selectedVideo.id?.videoId || selectedVideo.id;
 
-      try {
-        // Download the selected video
-        const videoInfo = await ytdown(`https://youtu.be/${videoId}`);
+      sendMessage(senderId, { text: `Downloading "${selectedVideo.title}" as audio...` }, pageAccessToken);
 
-        if (videoInfo.status) {
-          const videoData = videoInfo.data;
-          const videoDownloadUrl = videoData.video;
+      // Download the video as audio
+      const videoInfo = await ytdown(`https://youtu.be/${videoId}`);
 
-          // After sending the "Downloading" message, send the audio file
-          sendMessage(senderId, {
-            attachment: {
-              type: 'audio',
-              payload: {
-                url: videoDownloadUrl,
-                is_reusable: true
-              }
+      if (videoInfo.status) {
+        const videoDownloadUrl = videoInfo.data.video;
+
+        // Send the audio file to the user
+        sendMessage(senderId, {
+          attachment: {
+            type: 'audio',
+            payload: {
+              url: videoDownloadUrl,
+              is_reusable: true
             }
-          }, pageAccessToken);
+          }
+        }, pageAccessToken);
 
-        } else {
-          sendMessage(senderId, { text: "Failed to download the audio." }, pageAccessToken);
-        }
-
-      } catch (error) {
-        console.error("Download Error:", error);
-        sendMessage(senderId, { text: "An error occurred while trying to download the song." }, pageAccessToken);
+      } else {
+        sendMessage(senderId, { text: "Failed to download the audio." }, pageAccessToken);
       }
 
     } catch (error) {
-      console.error("Postback Error:", error);
+      console.error("Selection Error:", error);
       sendMessage(senderId, { text: "An error occurred while processing your request." }, pageAccessToken);
     }
   }
