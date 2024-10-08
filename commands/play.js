@@ -51,11 +51,15 @@ module.exports = {
         }
       ];
 
-      // Send the video titles as text, followed by the buttons
+      // Save the topResults in the sender session for later use when a number is sent
       sendMessage(senderId, {
         text: messageText,
         quick_replies: buttons
       }, pageAccessToken);
+
+      // Save top results to an in-memory storage or database for senderId
+      this._userChoices = this._userChoices || {};
+      this._userChoices[senderId] = topResults;
 
     } catch (error) {
       console.error("Search Error:", error);
@@ -63,11 +67,16 @@ module.exports = {
     }
   },
 
-  // This function handles the postback when the user selects a video to download
-  async handlePostback(senderId, payload, pageAccessToken, sendMessage) {
+  // This function handles the postback when the user selects a video to download (either by button or manually typing /1)
+  async handleSelection(senderId, selection, pageAccessToken, sendMessage) {
     try {
-      const { videoId } = JSON.parse(payload);
+      // Retrieve the saved topResults for the user
+      const topResults = this._userChoices?.[senderId];
+      if (!topResults || !topResults[selection]) {
+        return sendMessage(senderId, { text: "No valid video was selected." }, pageAccessToken);
+      }
 
+      const videoId = topResults[selection].id?.videoId || topResults[selection].id;
       if (!videoId) {
         return sendMessage(senderId, { text: "No valid video was selected." }, pageAccessToken);
       }
@@ -104,7 +113,7 @@ module.exports = {
       }
 
     } catch (error) {
-      console.error("Postback Error:", error);
+      console.error("Selection Error:", error);
       sendMessage(senderId, { text: "An error occurred while processing your request." }, pageAccessToken);
     }
   }
