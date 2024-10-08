@@ -24,8 +24,8 @@ function handlePostback(event, pageAccessToken) {
             },
             {
               type: 'postback',
-              title: 'Help',
-              payload: 'HELP'
+              title: 'Contact',
+              payload: 'CONTACT'
             },
             {
               type: 'postback',
@@ -54,9 +54,9 @@ function handlePostback(event, pageAccessToken) {
     };
     sendMessage(senderId, shareMessage, pageAccessToken);
 
-  } else if (payload === 'HELP') {
+  } else if (payload === 'CONTACT') {
     // Handle the help command
-    sendMessage(senderId, { text: "Here are some commands you can use: Follow, Help, Share" }, pageAccessToken);
+    sendMessage(senderId, { text: "You can contact me here: https://www.facebook.com/valneer.2024" }, pageAccessToken);
 
   } else {
     // Fallback response if payload is not recognized
