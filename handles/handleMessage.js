@@ -1,17 +1,3 @@
-const fs = require('fs');
-const path = require('path');
-const { sendMessage } = require('./sendMessage');
-
-const commands = new Map();
-const prefix = '/'; // Set your desired prefix
-
-// Load all command modules dynamically
-const commandFiles = fs.readdirSync(path.join(__dirname, '../commands')).filter(file => file.endsWith('.js'));
-for (const file of commandFiles) {
-  const command = require(`../commands/${file}`);
-  commands.set(command.name.toLowerCase(), command); // Ensure command names are stored in lowercase
-}
-
 async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
 
