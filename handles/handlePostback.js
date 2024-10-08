@@ -1,5 +1,5 @@
 const { sendMessage } = require('./sendMessage');
-const singCommand = require('../commands/play');  // Import the sing command
+const playCommand = require('../commands/play');  // Import the play command (formerly sing)
 
 // Define the URL for following and sharing the page
 const PAGE_ID = '303798532824975';  // Replace with your actual Facebook Page ID
@@ -47,13 +47,13 @@ async function handlePostback(event, pageAccessToken) {
     sendMessage(senderId, { text: "Here are some commands you can use: /help, /follow, /share" }, pageAccessToken);
 
   } else {
-    // Check if the payload contains a video selection for the "sing" command
+    // Check if the payload contains a video selection for the "play" command
     try {
       const parsedPayload = JSON.parse(payload);
 
       if (parsedPayload.action === 'select_video') {
-        // Pass the payload to the sing command's handlePostback to download the song
-        await singCommand.handlePostback(senderId, payload, pageAccessToken, sendMessage);
+        // Pass the parsed payload to the play command's handlePostback to download the song
+        await playCommand.handlePostback(senderId, payload, pageAccessToken, sendMessage);
       } else {
         sendMessage(senderId, { text: `I'm not sure how to respond to that.` }, pageAccessToken);
       }
