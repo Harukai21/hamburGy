@@ -26,20 +26,34 @@ module.exports = {
       // Select the top 3 results
       const topResults = searchResults.items.slice(0, 3);
 
-      // Send the options to the user with buttons 1, 2, 3
-      let buttons = topResults.map((result, index) => ({
-        content_type: 'text',
-        title: `${index + 1}. ${result.title}`,
-        payload: JSON.stringify({
-          action: "select_video",
-          videoIndex: index,
-          videoId: result.id?.videoId || result.id,
-          title: result.title
-        })
-      }));
+      // Prepare a message showing the top 3 video titles
+      let messageText = "Please choose a video:\n";
+      topResults.forEach((result, index) => {
+        messageText += `${index + 1}. ${result.title}\n`;
+      });
 
+      // Send the options to the user with buttons /1, /2, /3
+      const buttons = [
+        {
+          content_type: 'text',
+          title: '/1',
+          payload: JSON.stringify({ action: "select_video", videoIndex: 0, videoId: topResults[0].id?.videoId || topResults[0].id })
+        },
+        {
+          content_type: 'text',
+          title: '/2',
+          payload: JSON.stringify({ action: "select_video", videoIndex: 1, videoId: topResults[1].id?.videoId || topResults[1].id })
+        },
+        {
+          content_type: 'text',
+          title: '/3',
+          payload: JSON.stringify({ action: "select_video", videoIndex: 2, videoId: topResults[2].id?.videoId || topResults[2].id })
+        }
+      ];
+
+      // Send the video titles as text, followed by the buttons
       sendMessage(senderId, {
-        text: "Please choose a video:",
+        text: messageText,
         quick_replies: buttons
       }, pageAccessToken);
 
@@ -52,14 +66,14 @@ module.exports = {
   // This function handles the postback when the user selects a video to download
   async handlePostback(senderId, payload, pageAccessToken, sendMessage) {
     try {
-      const { videoId, title } = JSON.parse(payload);
+      const { videoId } = JSON.parse(payload);
 
       if (!videoId) {
         return sendMessage(senderId, { text: "No valid video was selected." }, pageAccessToken);
       }
 
       // Send the "Downloading" message first
-      sendMessage(senderId, { text: `Downloading "${title}" as audio...` }, pageAccessToken);
+      sendMessage(senderId, { text: `Downloading audio...` }, pageAccessToken);
 
       try {
         // Download the selected video
