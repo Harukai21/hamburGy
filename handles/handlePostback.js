@@ -10,7 +10,6 @@ async function handlePostback(event, pageAccessToken) {
   const senderId = event.sender.id;
   const payload = event.postback.payload;
 
-  // Check if the payload is an action like HELP, FOLLOW, or SHARE
   if (payload === 'ACTIONS') {
     const messageWithQuickReplies = {
       text: 'Choose an action:',
@@ -46,22 +45,12 @@ async function handlePostback(event, pageAccessToken) {
   } else if (payload === 'HELP') {
     sendMessage(senderId, { text: "Here are some commands you can use: /help, /follow, /share" }, pageAccessToken);
 
+  } else if (payload.startsWith('/')) {
+    // Handle the video selection when the user types /1, /2, or /3
+    await playCommand.handleSelection(senderId, payload, pageAccessToken, sendMessage);
+
   } else {
-    // Check if the payload contains a video selection for the "play" command
-    try {
-      const parsedPayload = JSON.parse(payload);
-
-      if (parsedPayload.action === 'select_video') {
-        // Pass the parsed payload to the play command's handlePostback to download the song
-        await playCommand.handlePostback(senderId, payload, pageAccessToken, sendMessage);
-      } else {
-        sendMessage(senderId, { text: `I'm not sure how to respond to that.` }, pageAccessToken);
-      }
-
-    } catch (error) {
-      console.error("Error handling postback:", error);
-      sendMessage(senderId, { text: "An error occurred while processing your request." }, pageAccessToken);
-    }
+    sendMessage(senderId, { text: `I'm not sure how to respond to that.` }, pageAccessToken);
   }
 }
 
