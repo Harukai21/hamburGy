@@ -5,7 +5,7 @@ const axios = require('axios');
 
 const g4f = new G4F();
 const groq = new Groq({ apiKey: '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' });
-const genAI = new GoogleGenerativeAI("YOUR_API_KEY_HERE");
+const genAI = new GoogleGenerativeAI("AIzaSyBcyNtgDliBoVFvsHueC1NPBDCucznkwUk");
 
 const messageHistory = new Map();
 const MAX_MESSAGE_LENGTH = 2000; // Facebook Messenger message limit
