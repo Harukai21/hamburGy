@@ -22,7 +22,7 @@ module.exports = {
       console.log("User's Message:", messageText || '[Attachment received]');
       
       // Indicate that the bot is processing the request
-      sendMessage(senderId, { text: '' }, pageAccessToken);
+      sendMessage(senderId, { text: '...' }, pageAccessToken);
 
       // Initialize user history if not present
       let userHistory = messageHistory.get(senderId) || [];
