@@ -1,6 +1,6 @@
 const { G4F } = require("g4f");
 const Groq = require('groq-sdk');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
 const axios = require('axios');
 const fs = require('fs');
 
@@ -90,9 +90,12 @@ async function handleImageWithGemini(imageUrl) {
     // Use the GenerateGeminiAnswer function to process the image
     const result = await GenerateGeminiAnswer([], image);
 
-    // Return the result from the Gemini model response
-    console.log("Gemini model result:", result);
-    return result || "Sorry, I couldn't analyze the image.";
+    // Log the generated result in detail
+    console.log("Generated Gemini content full:", result.response.candidates[0]);
+
+    // Extract and return the generated text from the response
+    const generatedText = result.response?.candidates?.[0]?.text || "No description was generated.";
+    return generatedText;
   } catch (error) {
     console.error('Error handling image with Gemini:', error.message);
     return "Sorry, I couldn't analyze the image. Please try again.";
@@ -154,8 +157,8 @@ function sendTwoChunksIfNecessary(senderId, message, pageAccessToken, sendMessag
   }
 }
 
-// Function to generate a response from the Gemini model
-async function GenerateGeminiAnswer(history, image) {
+// Updated function to generate a response from the Gemini model with safety settings
+async function GenerateGeminiAnswer(history, files) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const generationConfig = {
@@ -165,17 +168,23 @@ async function GenerateGeminiAnswer(history, image) {
     maxOutputTokens: 8192,
   };
 
+  const safetySettings = [
+    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+  ];
+
   try {
     // Send the image and prompt to the Gemini model
     const prompt = "Describe this image.";
-    const result = await model.generateContent([prompt, image], generationConfig);
+    const result = await model.generateContent([prompt, files], generationConfig, { safetySettings });
 
     // Log the generated result
     console.log("Generated Gemini content:", result);
 
     // Extract and return the generated text
     const generatedText = result.response?.candidates?.[0]?.text || "No description was generated.";
-    
     return generatedText;
   } catch (error) {
     console.error("Error generating Gemini answer:", error.message);
