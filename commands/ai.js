@@ -90,12 +90,19 @@ async function handleImageWithGemini(imageUrl) {
     // Use the GenerateGeminiAnswer function to process the image
     const result = await GenerateGeminiAnswer([], image);
 
-    // Log the generated result in detail
-    console.log("Generated Gemini content full:", result.response.candidates[0]);
+    // Log the full result for debugging purposes
+    console.log("Full Gemini result:", result);
 
-    // Extract and return the generated text from the response
-    const generatedText = result.response?.candidates?.[0]?.text || "No description was generated.";
-    return generatedText;
+    // Check if the result has a valid response and candidates
+    if (result?.response?.candidates && result.response.candidates.length > 0) {
+      // Extract and return the generated text from the response
+      const generatedText = result.response.candidates[0].text || "No description was generated.";
+      return generatedText;
+    } else {
+      // Log if the structure is not as expected
+      console.error('Gemini response does not contain valid candidates:', result.response);
+      return "Sorry, I couldn't analyze the image. Please try again.";
+    }
   } catch (error) {
     console.error('Error handling image with Gemini:', error.message);
     return "Sorry, I couldn't analyze the image. Please try again.";
