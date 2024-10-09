@@ -1,6 +1,6 @@
 const { G4F } = require("g4f");
 const Groq = require('groq-sdk');
-const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const axios = require('axios');
 const fs = require('fs');
 
