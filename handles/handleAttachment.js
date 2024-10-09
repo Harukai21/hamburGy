@@ -1,4 +1,4 @@
-const { execute } = require('../ai'); // Import AI handler
+const { execute } = require('../commands/ai'); // Import AI handler
 const { sendMessage } = require('../sendMessage'); // Import your custom sendMessage function
 
 function handleAttachment(event, PAGE_ACCESS_TOKEN) {
