@@ -93,13 +93,13 @@ async function handleImageWithGemini(imageUrl) {
     // Log the full result for debugging purposes
     console.log("Full Gemini result:", JSON.stringify(result, null, 2));
 
-    // Extract the text from the response's content parts
+    // Correctly extract the text from the response
     if (result?.response?.candidates && result.response.candidates[0]?.content?.parts[0]?.text) {
       const generatedText = result.response.candidates[0].content.parts[0].text;
-      return generatedText || "No description was generated.";
+      return generatedText;
     } else {
       console.error('Gemini response does not contain valid text:', result?.response);
-      return "No description was generated."; // Modify the fallback message
+      return "Sorry, I couldn't generate a description for the image."; // Improved fallback message
     }
   } catch (error) {
     console.error('Error handling image with Gemini:', error.message);
@@ -191,7 +191,7 @@ async function GenerateGeminiAnswer(history, files) {
     // Extract and return the generated text
     const generatedText = result?.response?.candidates && result.response.candidates[0]?.content?.parts[0]?.text
       ? result.response.candidates[0].content.parts[0].text
-      : "No description was generated.";
+      : "Sorry, I couldn't generate a description for the image.";
     
     return generatedText;
   } catch (error) {
