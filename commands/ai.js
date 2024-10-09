@@ -99,7 +99,7 @@ async function handleImageWithGemini(imageUrl) {
       return generatedText || "No description was generated.";
     } else {
       console.error('Gemini response does not contain valid text:', result?.response);
-      return "Sorry, I couldn't analyze the image. Please try again.";
+      return "No description was generated."; // Modify the fallback message
     }
   } catch (error) {
     console.error('Error handling image with Gemini:', error.message);
