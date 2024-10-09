@@ -172,9 +172,11 @@ async function GenerateGeminiAnswer(history, image) {
 
     // Log the generated result
     console.log("Generated Gemini content:", result);
+
+    // Extract and return the generated text
+    const generatedText = result.response?.candidates?.[0]?.text || "No description was generated.";
     
-    // Return the generated content
-    return result?.response?.text || "No description was generated.";
+    return generatedText;
   } catch (error) {
     console.error("Error generating Gemini answer:", error.message);
     return "Sorry, there was an error processing the image.";
