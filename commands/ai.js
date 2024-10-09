@@ -33,13 +33,14 @@ module.exports = {
       let responseMessage = '';
 
       if (messageType === 'image' && attachment) {
+        // Log that image processing is being called
+        console.log("Calling Gemini image processing...");
+
         // Handle image input using the image URL with Gemini
         responseMessage = await handleImageWithGemini(attachment.payload.url);
 
-        // Handle error in image processing
-        if (!responseMessage) {
-          responseMessage = "Sorry, I couldn't process the image. Please try again.";
-        }
+        // Log the response from Gemini
+        console.log("Gemini Response:", responseMessage);
       } else if (messageType === 'text' && messageText) {
         // Handle text input using G4F API
         userHistory.push({ role: 'user', content: messageText });
@@ -84,10 +85,13 @@ async function handleImageWithGemini(imageUrl) {
       },
     };
 
+    console.log("Image data prepared for Gemini.");
+
     // Use the GenerateGeminiAnswer function to process the image
     const result = await GenerateGeminiAnswer([], image);
 
     // Return the result from the Gemini model response
+    console.log("Gemini model result:", result);
     return result || "Sorry, I couldn't analyze the image.";
   } catch (error) {
     console.error('Error handling image with Gemini:', error.message);
@@ -166,6 +170,9 @@ async function GenerateGeminiAnswer(history, image) {
     const prompt = "Describe this image.";
     const result = await model.generateContent([prompt, image], generationConfig);
 
+    // Log the generated result
+    console.log("Generated Gemini content:", result);
+    
     // Return the generated content
     return result?.response?.text || "No description was generated.";
   } catch (error) {
