@@ -1,12 +1,11 @@
 const { G4F } = require("g4f");
 const Groq = require('groq-sdk');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const fs = require('fs');
 const axios = require('axios');
 
 const g4f = new G4F();
 const groq = new Groq({ apiKey: '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' });
-const genAI = new GoogleGenerativeAI("AIzaSyBcyNtgDliBoVFvsHueC1NPBDCucznkwUk");
+const genAI = new GoogleGenerativeAI("YOUR_API_KEY_HERE");
 
 const messageHistory = new Map();
 const MAX_MESSAGE_LENGTH = 2000; // Facebook Messenger message limit
@@ -33,8 +32,8 @@ module.exports = {
       let responseMessage = '';
 
       if (messageType === 'image' && attachment) {
-        // Handle image input
-        responseMessage = await handleImageWithGoogleAI(attachment);
+        // Handle image input using the image URL
+        responseMessage = await handleImageWithGoogleAI(attachment.payload.url);
       } else if (messageType === 'text' && messageText) {
         // Handle text input using G4F API
         userHistory.push({ role: 'user', content: messageText });
@@ -64,24 +63,12 @@ module.exports = {
   }
 };
 
-// Function to handle image input using Google Generative AI
-async function handleImageWithGoogleAI(attachment) {
+// Function to handle image input using Google Generative AI and image URL
+async function handleImageWithGoogleAI(imageUrl) {
   try {
-    // Download the image from the attachment URL
-    const imageUrl = attachment.payload.url;
-    const imageBuffer = await downloadImage(imageUrl);
-
-    // Convert image to base64
-    const image = {
-      inlineData: {
-        data: imageBuffer.toString("base64"),
-        mimeType: "image/png" // Adjust mime type based on the attachment type
-      }
-    };
-
-    // Analyze image with Google Generative AI
-    const prompt = "Analyze this image and describe it.";
-    const result = await genAI.generateText({ prompt, images: [image] });
+    // Analyze image with Google Generative AI using the URL
+    const prompt = `Analyze this image and describe it: ${imageUrl}`;
+    const result = await genAI.generateText({ prompt });
 
     // Return the result from the Google Generative AI response
     return result?.candidates?.[0]?.output || "Sorry, I couldn't analyze the image.";
@@ -89,15 +76,6 @@ async function handleImageWithGoogleAI(attachment) {
     console.error('Error handling image with Google Generative AI:', error.message);
     return "Sorry, I couldn't analyze the image. Please try again.";
   }
-}
-
-// Function to download the image from a URL
-async function downloadImage(url) {
-  const response = await axios({
-    url,
-    responseType: 'arraybuffer'
-  });
-  return Buffer.from(response.data, 'binary');
 }
 
 // Function to get a response from the G4F API using a simple call
