@@ -1,5 +1,5 @@
 const { execute } = require('../commands/ai'); // Import AI handler
-const { sendMessage } = require('../sendMessage'); // Import your custom sendMessage function
+const { sendMessage } = require('./sendMessage'); // Import your custom sendMessage function
 
 function handleAttachment(event, PAGE_ACCESS_TOKEN) {
   const senderId = event.sender.id;
