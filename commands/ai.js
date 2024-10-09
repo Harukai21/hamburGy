@@ -20,7 +20,7 @@ module.exports = {
   async execute(senderId, messageText, pageAccessToken, sendMessage, messageType = 'text', attachment = null) {
     try {
       console.log("User's Message:", messageText || '[Attachment received]');
-      
+
       // Indicate that the bot is processing the request
       sendMessage(senderId, { text: '' }, pageAccessToken);
 
@@ -33,20 +33,16 @@ module.exports = {
       let responseMessage = '';
 
       if (messageType === 'image' && attachment) {
-        // Log that image processing is being called
         console.log("Calling Gemini image processing...");
 
         // Handle image input using the image URL with Gemini
         responseMessage = await handleImageWithGemini(attachment.payload.url);
 
-        // Log the response from Gemini
         console.log("Gemini Response:", responseMessage);
       } else if (messageType === 'text' && messageText) {
-        // Handle text input using G4F API
         userHistory.push({ role: 'user', content: messageText });
         responseMessage = await getG4FResponse(userHistory);
 
-        // Fallback to Groq if G4F fails
         if (!responseMessage) {
           responseMessage = await getGroqResponse(userHistory);
         }
@@ -56,11 +52,9 @@ module.exports = {
 
       // Append the assistant's response to the history
       userHistory.push({ role: 'assistant', content: responseMessage });
-
-      // Update the message history for the user
       messageHistory.set(senderId, userHistory);
 
-      // Send the response message in chunks if it exceeds the limit
+      // Send the response message in chunks if necessary
       sendTwoChunksIfNecessary(senderId, responseMessage, pageAccessToken, sendMessage);
 
     } catch (error) {
@@ -73,11 +67,9 @@ module.exports = {
 // Function to handle image input using Gemini (Google Generative AI)
 async function handleImageWithGemini(imageUrl) {
   try {
-    // Download the image from the provided URL
     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     const imageBuffer = Buffer.from(response.data, 'binary');
     
-    // Prepare the image for the Gemini model
     const image = {
       inlineData: {
         data: imageBuffer.toString('base64'),
@@ -87,19 +79,14 @@ async function handleImageWithGemini(imageUrl) {
 
     console.log("Image data prepared for Gemini.");
 
-    // Use the GenerateGeminiAnswer function to process the image
     const result = await GenerateGeminiAnswer([], image);
 
-    // Log the full result for debugging purposes
-    console.log("Full Gemini result:", JSON.stringify(result, null, 2));
+    console.log("Generated Gemini content:", JSON.stringify(result, null, 2));
 
-    // Correctly extract the text from the response
     if (result?.response?.candidates && result.response.candidates[0]?.content?.parts[0]?.text) {
-      const generatedText = result.response.candidates[0].content.parts[0].text;
-      return generatedText;
+      return result.response.candidates[0].content.parts[0].text;
     } else {
-      console.error('Gemini response does not contain valid text:', result?.response);
-      return "Sorry, I couldn't generate a description for the image."; // Improved fallback message
+      return "Sorry, I couldn't generate a description for the image.";
     }
   } catch (error) {
     console.error('Error handling image with Gemini:', error.message);
@@ -107,14 +94,14 @@ async function handleImageWithGemini(imageUrl) {
   }
 }
 
-// Function to get a response from the G4F API using a simple call
+// Function to get a response from the G4F API
 async function getG4FResponse(userHistory) {
   try {
     const response = await g4f.chatCompletion(userHistory);
     return response;
   } catch (error) {
     console.error('Error communicating with G4F:', error.message);
-    return null; // Return null to indicate failure and trigger fallback
+    return null;
   }
 }
 
@@ -131,7 +118,6 @@ async function getGroqResponse(userHistory) {
       stop: null
     });
 
-    // Collect the response message from the stream
     let responseMessage = '';
     for await (const chunk of chatCompletion) {
       responseMessage += (chunk.choices[0]?.delta?.content || '');
@@ -139,30 +125,27 @@ async function getGroqResponse(userHistory) {
     return responseMessage;
   } catch (error) {
     console.error('Error communicating with Groq:', error.message);
-    return null; // If both APIs fail, return null
+    return null;
   }
 }
 
 // Function to send the message in two chunks if necessary
 function sendTwoChunksIfNecessary(senderId, message, pageAccessToken, sendMessage) {
   if (message.length > MAX_MESSAGE_LENGTH) {
-    const firstChunk = message.slice(0, MAX_MESSAGE_LENGTH); // First 2000 characters
-    const secondChunk = message.slice(MAX_MESSAGE_LENGTH); // Remaining characters
+    const firstChunk = message.slice(0, MAX_MESSAGE_LENGTH);
+    const secondChunk = message.slice(MAX_MESSAGE_LENGTH);
 
-    // Send the first chunk immediately
     sendMessage(senderId, { text: firstChunk }, pageAccessToken);
 
-    // Send the second chunk after a 1-second delay
     setTimeout(() => {
       sendMessage(senderId, { text: secondChunk }, pageAccessToken);
-    }, 1000); // 1 second delay
+    }, 1000);
   } else {
-    // If the message is within the limit, send it in one go
     sendMessage(senderId, { text: message }, pageAccessToken);
   }
 }
 
-// Updated function to generate a response from the Gemini model with safety settings
+// Simplified function to generate a response from Gemini model
 async function GenerateGeminiAnswer(history, files) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
@@ -173,29 +156,15 @@ async function GenerateGeminiAnswer(history, files) {
     maxOutputTokens: 8192,
   };
 
-  const safetySettings = [
-    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-  ];
-
   try {
-    // Send the image and prompt to the Gemini model
     const prompt = "Describe this image.";
-    const result = await model.generateContent([prompt, files], generationConfig, { safetySettings });
+    const result = await model.generateContent([prompt, files], generationConfig);
 
-    // Log the generated result
     console.log("Generated Gemini content:", JSON.stringify(result, null, 2));
 
-    // Extract and return the generated text
-    const generatedText = result?.response?.candidates && result.response.candidates[0]?.content?.parts[0]?.text
-      ? result.response.candidates[0].content.parts[0].text
-      : "Sorry, I couldn't generate a description for the image.";
-    
-    return generatedText;
+    return result;
   } catch (error) {
     console.error("Error generating Gemini answer:", error.message);
-    return "Sorry, there was an error processing the image.";
+    return null;
   }
 }
