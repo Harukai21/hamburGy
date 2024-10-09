@@ -70,7 +70,7 @@ function sendMessage(senderId, message, pageAccessToken) {
       // 4. Turn off typing indicator after sending the message
       sendAction(senderId, pageAccessToken, 'typing_off');
     });
-  }, 2000); // 2-second delay to simulate typing
+  }, 0000); // 2-second delay to simulate typing
 }
 
 module.exports = { sendMessage };
