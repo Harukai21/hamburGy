@@ -22,7 +22,7 @@ module.exports = {
       console.log("User's Message:", messageText || '[Attachment received]');
       
       // Indicate that the bot is processing the request
-      sendMessage(senderId, { text: '...' }, pageAccessToken);
+      sendMessage(senderId, { text: '' }, pageAccessToken);
 
       // Initialize user history if not present
       let userHistory = messageHistory.get(senderId) || [];
@@ -35,6 +35,11 @@ module.exports = {
       if (messageType === 'image' && attachment) {
         // Handle image input using the image URL with Gemini
         responseMessage = await handleImageWithGemini(attachment.payload.url);
+
+        // Handle error in image processing
+        if (!responseMessage) {
+          responseMessage = "Sorry, I couldn't process the image. Please try again.";
+        }
       } else if (messageType === 'text' && messageText) {
         // Handle text input using G4F API
         userHistory.push({ role: 'user', content: messageText });
