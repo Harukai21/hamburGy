@@ -94,8 +94,8 @@ async function handleImageWithGemini(imageUrl) {
     console.log("Full Gemini result:", result);
 
     // Check if the result has a valid text function and call it to get the actual text
-    if (result?.response?.candidates?.[0]?.text) {
-      const generatedText = result.response.candidates[0].text;
+    if (result?.response?.text) {
+      const generatedText = await result.response.text();
       return generatedText || "No description was generated.";
     } else {
       // Log if the structure is not as expected
@@ -190,7 +190,7 @@ async function GenerateGeminiAnswer(history, files) {
     console.log("Generated Gemini content:", result);
 
     // Extract and return the generated text
-    const generatedText = result.response?.candidates?.[0]?.text || "No description was generated.";
+    const generatedText = result.response?.text ? await result.response.text() : "No description was generated.";
     return generatedText;
   } catch (error) {
     console.error("Error generating Gemini answer:", error.message);
