@@ -93,15 +93,10 @@ async function handleImageWithGemini(imageUrl) {
     // Log the full result for debugging purposes
     console.log("Full Gemini result:", result);
 
-    // Check if the result has a valid text function and call it to get the actual text
-    if (result?.response?.text) {
-      const generatedText = await result.response.text();
-      return generatedText || "No description was generated.";
-    } else {
-      // Log if the structure is not as expected
-      console.error('Gemini response does not contain valid text:', result.response);
-      return "Sorry, I couldn't analyze the image. Please try again.";
-    }
+    // Check if the result has a valid text property and return the response
+    const generatedText = result?.response?.text || "No description was generated.";
+    
+    return generatedText;
   } catch (error) {
     console.error('Error handling image with Gemini:', error.message);
     return "Sorry, I couldn't analyze the image. Please try again.";
@@ -144,39 +139,22 @@ async function getGroqResponse(userHistory) {
   }
 }
 
-// Function to handle image input using Gemini (Google Generative AI)
-async function handleImageWithGemini(imageUrl) {
-  try {
-    // Download the image from the provided URL
-    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-    const imageBuffer = Buffer.from(response.data, 'binary');
-    
-    // Prepare the image for the Gemini model
-    const image = {
-      inlineData: {
-        data: imageBuffer.toString('base64'),
-        mimeType: response.headers['content-type'],
-      },
-    };
+// Function to send the message in two chunks if necessary
+function sendTwoChunksIfNecessary(senderId, message, pageAccessToken, sendMessage) {
+  if (message.length > MAX_MESSAGE_LENGTH) {
+    const firstChunk = message.slice(0, MAX_MESSAGE_LENGTH); // First 2000 characters
+    const secondChunk = message.slice(MAX_MESSAGE_LENGTH); // Remaining characters
 
-    console.log("Image data prepared for Gemini.");
+    // Send the first chunk immediately
+    sendMessage(senderId, { text: firstChunk }, pageAccessToken);
 
-    // Use the GenerateGeminiAnswer function to process the image
-    const result = await GenerateGeminiAnswer([], image);
-
-    // Log the full result for debugging purposes
-    console.log("Full Gemini result:", result);
-
-    // Ensure result structure is valid and contains text
-    if (result) {
-      return result;  // Return the processed response directly
-    } else {
-      console.error('Gemini response does not contain valid text:', result);
-      return "Sorry, I couldn't analyze the image. Please try again.";
-    }
-  } catch (error) {
-    console.error('Error handling image with Gemini:', error.message);
-    return "Sorry, I couldn't analyze the image. Please try again.";
+    // Send the second chunk after a 1-second delay
+    setTimeout(() => {
+      sendMessage(senderId, { text: secondChunk }, pageAccessToken);
+    }, 1000); // 1 second delay
+  } else {
+    // If the message is within the limit, send it in one go
+    sendMessage(senderId, { text: message }, pageAccessToken);
   }
 }
 
@@ -206,13 +184,9 @@ async function GenerateGeminiAnswer(history, files) {
     // Log the generated result
     console.log("Generated Gemini content:", result);
 
-    // Ensure we have valid text in the response
-    if (result?.response?.text) {
-      const generatedText = await result.response.text();
-      return generatedText;
-    } else {
-      return "No description was generated.";
-    }
+    // Extract and return the generated text
+    const generatedText = result.response?.text || "No description was generated.";
+    return generatedText;
   } catch (error) {
     console.error("Error generating Gemini answer:", error.message);
     return "Sorry, there was an error processing the image.";
