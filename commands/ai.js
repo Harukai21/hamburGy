@@ -2,10 +2,12 @@ const { G4F } = require("g4f");
 const Groq = require('groq-sdk');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const axios = require('axios');
+const fs = require('fs');
 
+// Initialize the APIs
 const g4f = new G4F();
 const groq = new Groq({ apiKey: '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' });
-const genAI = new GoogleGenerativeAI("AIzaSyBcyNtgDliBoVFvsHueC1NPBDCucznkwUk");
+const genAI = new GoogleGenerativeAI(process.env.API_KEY);
 
 const messageHistory = new Map();
 const MAX_MESSAGE_LENGTH = 2000; // Facebook Messenger message limit
@@ -32,8 +34,8 @@ module.exports = {
       let responseMessage = '';
 
       if (messageType === 'image' && attachment) {
-        // Handle image input using the image URL
-        responseMessage = await handleImageWithGoogleAI(attachment.payload.url);
+        // Handle image input using the image URL with Gemini
+        responseMessage = await handleImageWithGemini(attachment.payload.url);
       } else if (messageType === 'text' && messageText) {
         // Handle text input using G4F API
         userHistory.push({ role: 'user', content: messageText });
@@ -63,17 +65,28 @@ module.exports = {
   }
 };
 
-// Function to handle image input using Google Generative AI and image URL
-async function handleImageWithGoogleAI(imageUrl) {
+// Function to handle image input using Gemini (Google Generative AI)
+async function handleImageWithGemini(imageUrl) {
   try {
-    // Analyze image with Google Generative AI using the URL
-    const prompt = `Analyze this image and describe it: ${imageUrl}`;
-    const result = await genAI.generateText({ prompt });
+    // Download the image from the provided URL
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const imageBuffer = Buffer.from(response.data, 'binary');
+    
+    // Prepare the image for the Gemini model
+    const image = {
+      inlineData: {
+        data: imageBuffer.toString('base64'),
+        mimeType: response.headers['content-type'],
+      },
+    };
 
-    // Return the result from the Google Generative AI response
-    return result?.candidates?.[0]?.output || "Sorry, I couldn't analyze the image.";
+    // Use the GenerateGeminiAnswer function to process the image
+    const result = await GenerateGeminiAnswer([], image);
+
+    // Return the result from the Gemini model response
+    return result || "Sorry, I couldn't analyze the image.";
   } catch (error) {
-    console.error('Error handling image with Google Generative AI:', error.message);
+    console.error('Error handling image with Gemini:', error.message);
     return "Sorry, I couldn't analyze the image. Please try again.";
   }
 }
@@ -130,5 +143,29 @@ function sendTwoChunksIfNecessary(senderId, message, pageAccessToken, sendMessag
   } else {
     // If the message is within the limit, send it in one go
     sendMessage(senderId, { text: message }, pageAccessToken);
+  }
+}
+
+// Function to generate a response from the Gemini model
+async function GenerateGeminiAnswer(history, image) {
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const generationConfig = {
+    temperature: 0.9,
+    topP: 0.95,
+    topK: 64,
+    maxOutputTokens: 8192,
+  };
+
+  try {
+    // Send the image and prompt to the Gemini model
+    const prompt = "Describe this image.";
+    const result = await model.generateContent([prompt, image], generationConfig);
+
+    // Return the generated content
+    return result?.response?.text || "No description was generated.";
+  } catch (error) {
+    console.error("Error generating Gemini answer:", error.message);
+    return "Sorry, there was an error processing the image.";
   }
 }
