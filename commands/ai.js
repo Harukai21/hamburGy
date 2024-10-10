@@ -19,26 +19,20 @@ module.exports = {
 
   async execute(senderId, messageText, pageAccessToken, sendMessage, messageType = 'text', attachment = null) {
     try {
-      console.log("User's Message:", messageText || '[Attachment received]');
-
       // Indicate that the bot is processing the request
       sendMessage(senderId, { text: '' }, pageAccessToken);
 
       // Initialize user history if not present
       let userHistory = messageHistory.get(senderId) || [];
       if (userHistory.length === 0) {
-        userHistory.push({ role: 'system', content: 'You are a helpful and kind assistant that answers everything.' });
+        userHistory.push({ role: 'system', content: 'You are barry, a helpful and kind assistant that answers everything.' });
       }
 
       let responseMessage = '';
 
       if (messageType === 'image' && attachment) {
-        console.log("Calling Gemini image processing...");
-
         // Handle image input using the image URL with Gemini
         responseMessage = await handleImageWithGemini(attachment.payload.url);
-
-        console.log("Gemini Response:", responseMessage);
       } else if (messageType === 'text' && messageText) {
         userHistory.push({ role: 'user', content: messageText });
         responseMessage = await getG4FResponse(userHistory);
@@ -58,7 +52,6 @@ module.exports = {
       sendTwoChunksIfNecessary(senderId, responseMessage, pageAccessToken, sendMessage);
 
     } catch (error) {
-      console.error('Error processing the request:', error.message);
       sendMessage(senderId, { text: "I'm busy right now, please try again later." }, pageAccessToken);
     }
   }
@@ -77,11 +70,7 @@ async function handleImageWithGemini(imageUrl) {
       },
     };
 
-    console.log("Image data prepared for Gemini.");
-
     const result = await GenerateGeminiAnswer([], image);
-
-    console.log("Generated Gemini content:", JSON.stringify(result, null, 2));
 
     if (result?.response?.candidates && result.response.candidates[0]?.content?.parts[0]?.text) {
       return result.response.candidates[0].content.parts[0].text;
@@ -89,7 +78,6 @@ async function handleImageWithGemini(imageUrl) {
       return "Sorry, I couldn't generate a description for the image.";
     }
   } catch (error) {
-    console.error('Error handling image with Gemini:', error.message);
     return "Sorry, I couldn't analyze the image. Please try again.";
   }
 }
@@ -100,7 +88,6 @@ async function getG4FResponse(userHistory) {
     const response = await g4f.chatCompletion(userHistory);
     return response;
   } catch (error) {
-    console.error('Error communicating with G4F:', error.message);
     return null;
   }
 }
@@ -124,7 +111,6 @@ async function getGroqResponse(userHistory) {
     }
     return responseMessage;
   } catch (error) {
-    console.error('Error communicating with Groq:', error.message);
     return null;
   }
 }
@@ -157,14 +143,11 @@ async function GenerateGeminiAnswer(history, files) {
   };
 
   try {
-    const prompt = "Describe this image.";
+    const prompt = "Describe the image. If there's a question, a math problem or an activity, then answer and solve it.";
     const result = await model.generateContent([prompt, files], generationConfig);
-
-    console.log("Generated Gemini content:", JSON.stringify(result, null, 2));
 
     return result;
   } catch (error) {
-    console.error("Error generating Gemini answer:", error.message);
     return null;
   }
 }
