@@ -45,7 +45,7 @@ function sendMessage(senderId, message, pageAccessToken) {
     payload.message.quick_replies = message.quick_replies;
   }
 
-  // 1. Mark the message as "seen" immediately
+  // 1. Mark the message as "seen" immediately, regardless of whether it's text or attachment
   sendAction(senderId, pageAccessToken, 'mark_seen');
 
   // 2. Send typing indicator immediately after receiving the message
@@ -70,7 +70,7 @@ function sendMessage(senderId, message, pageAccessToken) {
       // 4. Turn off typing indicator after sending the message
       sendAction(senderId, pageAccessToken, 'typing_off');
     });
-  }, 0000); // 2-second delay to simulate typing
+  }, 0000); // Delay to simulate typing
 }
 
-module.exports = { sendMessage };
+module.exports = { sendMessage, sendAction };
