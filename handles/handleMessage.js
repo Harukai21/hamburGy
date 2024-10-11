@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const { sendMessage } = require('./sendMessage'); // Importing sendMessage
-const axios = require('axios'); // Using axios instead of node-fetch
 
 const commands = new Map();
 const prefix = '/'; // Set your desired prefix
@@ -13,31 +12,11 @@ for (const file of commandFiles) {
   commands.set(command.name.toLowerCase(), command); // Ensure command names are stored in lowercase
 }
 
-// Helper function to fetch user profile information using axios
-async function getUserProfile(senderId, pageAccessToken) {
-  const url = `https://graph.facebook.com/${senderId}?fields=first_name,last_name&access_token=${pageAccessToken}`;
-  try {
-    const response = await axios.get(url);
-    return response.data;
-  } catch (error) {
-    console.error(`Failed to fetch user profile: ${error.message}`);
-    return null; // Return null if there was an error
-  }
-}
-
 async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
   const messageText = event.message.text.trim();
 
-  // Fetch user's profile info (name) for the call command
-  const userProfile = await getUserProfile(senderId, pageAccessToken);
-
-  if (!userProfile) {
-    // Handle case where user profile could not be fetched
-    console.error('Could not fetch user profile, proceeding without name.');
-  }
-
-  const senderName = userProfile ? `${userProfile.first_name} ${userProfile.last_name}`.trim() : 'User';
+  // We're using only the senderId, skipping profile fetching
 
   // Check if the message starts with the command prefix
   if (messageText.startsWith(prefix)) {
@@ -47,12 +26,7 @@ async function handleMessage(event, pageAccessToken) {
     if (commands.has(commandName)) {
       const command = commands.get(commandName);
       try {
-        // Pass senderName only to the call command, others only require senderId
-        if (commandName === 'call') {
-          await command.execute(senderId, senderName, args, pageAccessToken, sendMessage);
-        } else {
-          await command.execute(senderId, args, pageAccessToken, sendMessage); // For all other commands
-        }
+        await command.execute(senderId, args, pageAccessToken, sendMessage); // Pass senderId to all commands
       } catch (error) {
         console.error(`Error executing command ${commandName}:`, error);
         sendMessage(senderId, { text: 'There was an error executing that command.' }, pageAccessToken);
@@ -65,7 +39,7 @@ async function handleMessage(event, pageAccessToken) {
   const aiCommand = commands.get('ai');
   if (aiCommand) {
     try {
-      await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
+      await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage); // Use senderId and message
     } catch (error) {
       console.error('Error executing Ai command:', error);
       sendMessage(senderId, { text: 'There was an error processing your request.' }, pageAccessToken);
