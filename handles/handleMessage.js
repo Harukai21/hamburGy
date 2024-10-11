@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { sendMessage } = require('./sendMessage'); // Importing sendMessage
-const fetch = require('node-fetch'); // Ensure you have 'node-fetch' installed
+const axios = require('axios'); // Using axios instead of node-fetch
 
 const commands = new Map();
 const prefix = '/'; // Set your desired prefix
@@ -13,15 +13,16 @@ for (const file of commandFiles) {
   commands.set(command.name.toLowerCase(), command); // Ensure command names are stored in lowercase
 }
 
-// Helper function to fetch user profile information
+// Helper function to fetch user profile information using axios
 async function getUserProfile(senderId, pageAccessToken) {
   const url = `https://graph.facebook.com/${senderId}?fields=first_name,last_name&access_token=${pageAccessToken}`;
-  const response = await fetch(url);
-  if (!response.ok) {
-    console.error(`Failed to fetch user profile: ${response.statusText}`);
+  try {
+    const response = await axios.get(url);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to fetch user profile: ${error.message}`);
     return { first_name: 'User', last_name: '' }; // Fallback if we can't get the name
   }
-  return response.json();
 }
 
 async function handleMessage(event, pageAccessToken) {
