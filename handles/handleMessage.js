@@ -21,7 +21,7 @@ async function getUserProfile(senderId, pageAccessToken) {
     return response.data;
   } catch (error) {
     console.error(`Failed to fetch user profile: ${error.message}`);
-    return { first_name: 'User', last_name: '' }; // Fallback if we can't get the name
+    return null; // Return null if there was an error
   }
 }
 
@@ -31,7 +31,13 @@ async function handleMessage(event, pageAccessToken) {
 
   // Fetch user's profile info (name) for the call command
   const userProfile = await getUserProfile(senderId, pageAccessToken);
-  const senderName = `${userProfile.first_name} ${userProfile.last_name}`.trim();
+
+  if (!userProfile) {
+    // Handle case where user profile could not be fetched
+    console.error('Could not fetch user profile, proceeding without name.');
+  }
+
+  const senderName = userProfile ? `${userProfile.first_name} ${userProfile.last_name}`.trim() : 'User';
 
   // Check if the message starts with the command prefix
   if (messageText.startsWith(prefix)) {
