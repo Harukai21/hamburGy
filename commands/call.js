@@ -3,7 +3,12 @@ module.exports = {
   description: 'Sends a message to the admin or replies to a user',
   usage: '/call <yourmessage>',
   author: 'BIRU',
-  execute(senderId, senderName, args, pageAccessToken, sendMessage) {
+  execute(senderId, args, pageAccessToken, sendMessage) {
+    if (!Array.isArray(args)) {
+      console.error('args is not an array:', args); // Debugging: log the args if it's not an array
+      return sendMessage(senderId, { text: '⚠️ An error occurred. Please try again.' }, pageAccessToken);
+    }
+
     if (args.length === 0) {
       return sendMessage(senderId, { text: '⚠️ Please provide a message.' }, pageAccessToken);
     }
