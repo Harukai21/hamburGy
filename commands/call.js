@@ -9,7 +9,7 @@ module.exports = {
     }
 
     // If sender is admin (admin can reply with "/call <user_id> <message>")
-    if (senderId === '𝟣𝟢𝟢𝟢𝟤𝟤𝟣𝟫𝟦𝟪𝟤𝟧𝟧𝟨𝟧') {
+    if (senderId === '100022194825655') { // Replace with admin's Facebook ID
       const userId = args[0]; // First argument is the user ID
       const replyMessage = args.slice(1).join(' '); // Rest is the message
 
@@ -23,10 +23,10 @@ module.exports = {
     } else {
       // If sender is a regular user
       const userMessage = args.join(' '); // Combine args to form the message
-      const adminId = '𝟣𝟢𝟢𝟢𝟤𝟤𝟣𝟫𝟦𝟪𝟤𝟧𝟧𝟨𝟧'; // Replace with your admin's Facebook ID
+      const adminId = '100022194825655'; // Replace with your admin's Facebook ID
 
       // Send the message to the admin with user info
-      const messageToAdmin = `📩 Message from user:\n\n👤 **Name**: ${senderName}\n🆔 **User ID**: ${senderId}\n✉️ **Message**: ${userMessage}`;
+      const messageToAdmin = `📩 Message from user:\n\n🆔 **User ID**: ${senderId}\n✉️ **Message**: ${userMessage}`;
       sendMessage(adminId, { text: messageToAdmin }, pageAccessToken);
 
       // Notify the user that their message has been sent
