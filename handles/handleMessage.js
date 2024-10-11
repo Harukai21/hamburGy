@@ -16,17 +16,15 @@ async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
   const messageText = event.message.text.trim();
 
-  // We're using only the senderId, skipping profile fetching
-
   // Check if the message starts with the command prefix
   if (messageText.startsWith(prefix)) {
-    const args = messageText.slice(prefix.length).split(' ');
-    const commandName = args.shift().toLowerCase();
+    const args = messageText.slice(prefix.length).split(/\s+/); // Split by spaces to ensure it's an array
+    const commandName = args.shift().toLowerCase(); // Get the command name
 
     if (commands.has(commandName)) {
       const command = commands.get(commandName);
       try {
-        await command.execute(senderId, args, pageAccessToken, sendMessage); // Pass senderId to all commands
+        await command.execute(senderId, args, pageAccessToken, sendMessage); // Pass args as an array
       } catch (error) {
         console.error(`Error executing command ${commandName}:`, error);
         sendMessage(senderId, { text: 'There was an error executing that command.' }, pageAccessToken);
@@ -39,7 +37,7 @@ async function handleMessage(event, pageAccessToken) {
   const aiCommand = commands.get('ai');
   if (aiCommand) {
     try {
-      await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage); // Use senderId and message
+      await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage); // Pass message as string
     } catch (error) {
       console.error('Error executing Ai command:', error);
       sendMessage(senderId, { text: 'There was an error processing your request.' }, pageAccessToken);
