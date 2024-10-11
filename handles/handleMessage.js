@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const { sendMessage } = require('./sendMessage');
-const axios = require('axios'); // Use axios for HTTP requests
+const { sendMessage } = require('./sendMessage'); // Importing sendMessage
+const fetch = require('node-fetch'); // Ensure you have 'node-fetch' installed
 
 const commands = new Map();
 const prefix = '/'; // Set your desired prefix
@@ -13,24 +13,22 @@ for (const file of commandFiles) {
   commands.set(command.name.toLowerCase(), command); // Ensure command names are stored in lowercase
 }
 
-// Helper function to fetch user profile information using axios
+// Helper function to fetch user profile information
 async function getUserProfile(senderId, pageAccessToken) {
   const url = `https://graph.facebook.com/${senderId}?fields=first_name,last_name&access_token=${pageAccessToken}`;
-
-  try {
-    const response = await axios.get(url);
-    return response.data;
-  } catch (error) {
-    console.error(`Failed to fetch user profile: ${error.message}`);
+  const response = await fetch(url);
+  if (!response.ok) {
+    console.error(`Failed to fetch user profile: ${response.statusText}`);
     return { first_name: 'User', last_name: '' }; // Fallback if we can't get the name
   }
+  return response.json();
 }
 
 async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
   const messageText = event.message.text.trim();
 
-  // Fetch user's profile info (name)
+  // Fetch user's profile info (name) for the call command
   const userProfile = await getUserProfile(senderId, pageAccessToken);
   const senderName = `${userProfile.first_name} ${userProfile.last_name}`.trim();
 
@@ -42,7 +40,12 @@ async function handleMessage(event, pageAccessToken) {
     if (commands.has(commandName)) {
       const command = commands.get(commandName);
       try {
-        await command.execute(senderId, senderName, args, pageAccessToken, sendMessage);
+        // Pass senderName only to the call command, others only require senderId
+        if (commandName === 'call') {
+          await command.execute(senderId, senderName, args, pageAccessToken, sendMessage);
+        } else {
+          await command.execute(senderId, args, pageAccessToken, sendMessage); // For all other commands
+        }
       } catch (error) {
         console.error(`Error executing command ${commandName}:`, error);
         sendMessage(senderId, { text: 'There was an error executing that command.' }, pageAccessToken);
