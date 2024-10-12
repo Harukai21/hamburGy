@@ -77,6 +77,13 @@ module.exports = {
       const image = await wait(result);
       const imageUrl = image.url;  // Get the image URL from the response
 
+      // Debugging: Log the generated image URL
+      console.log('Generated Image URL:', imageUrl);
+
+      if (!imageUrl) {
+        return sendMessage(senderId, { text: '❌ Error generating image URL. Please try again later.' }, pageAccessToken);
+      }
+
       // Send the image separately from the text
       await sendMessage(senderId, {
         attachment: {
