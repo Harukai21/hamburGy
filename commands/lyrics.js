@@ -18,6 +18,7 @@ module.exports = {
       const headers = { 'User-Agent': 'Mozilla/5.0' };
       let lyrics = null;
       let artist = null;
+      let imageUrl = null;
 
       // First attempt: Fetch lyrics from Google
       try {
@@ -31,6 +32,9 @@ module.exports = {
           const parse = cheerio.load(content);
           lyrics = parse('span[jsname]').text();
           artist = $('div.auw0zb').text() || 'Unknown';
+
+          // Extract album image URL if available (you may need to adjust this based on the page structure)
+          imageUrl = $('img[src]').attr('src');
         }
       } catch (googleError) {
         console.log('Google lyrics fetch failed, trying Musixmatch...');
@@ -48,6 +52,9 @@ module.exports = {
             const mxmResponse = await axios.get(mxmUrl, { headers });
             lyrics = cheerio.load(mxmResponse.data)('.lyrics__content__ok').text();
             artist = cheerio.load(mxmResponse.data)('.mxm-track-title__artist-link').text() || 'Unknown';
+
+            // Extract album image URL if available
+            imageUrl = cheerio.load(mxmResponse.data)('.banner-album-image').attr('src');
           }
         } catch (musixmatchError) {
           console.log('Musixmatch lyrics fetch failed:', musixmatchError);
@@ -56,17 +63,39 @@ module.exports = {
 
       // Check if lyrics were found
       if (lyrics) {
-        const lyricsMessage = `🎶 *${songTitle}* by ${artist}\n\n${lyrics}`;
-        
-        // Split the lyrics message into chunks if it exceeds 2000 characters
+        const lyricsMessage = {
+          title: songTitle,
+          artist: artist,
+          lyrics: lyrics,
+          image: imageUrl || null
+        };
+
+        // Send the lyrics in chunks if too long
         const maxMessageLength = 2000;
-        if (lyricsMessage.length > maxMessageLength) {
-          const messages = splitMessageIntoChunks(lyricsMessage, maxMessageLength);
+        const fullMessage = `🎶 *${lyricsMessage.title}* by ${lyricsMessage.artist}\n\n${lyricsMessage.lyrics}`;
+
+        if (fullMessage.length > maxMessageLength) {
+          const messages = splitMessageIntoChunks(fullMessage, maxMessageLength);
           for (const message of messages) {
             sendMessage(senderId, { text: message }, pageAccessToken);
           }
         } else {
-          sendMessage(senderId, { text: lyricsMessage }, pageAccessToken);
+          sendMessage(senderId, { text: fullMessage }, pageAccessToken);
+        }
+
+        // Optionally send the album image if it exists
+        if (lyricsMessage.image) {
+          sendMessage(senderId, {
+            attachment: {
+              type: 'image',
+              payload: {
+                url: lyricsMessage.image,
+                is_reusable: true
+              }
+            }
+          }, pageAccessToken).catch(err => {
+            console.error('Error sending image:', err);
+          });
         }
       } else {
         sendMessage(senderId, { text: 'Sorry, no lyrics were found for your query.' }, pageAccessToken);
