@@ -1,11 +1,27 @@
+const axios = require('axios');
 const { Prodia } = require("prodia.js");
-const { generateImageSDXL, getSDXLModels, wait } = Prodia("eaca0864-70a4-4653-8dc7-f5ba3918326f");
+const { generateImageSDXL, wait } = Prodia("eaca0864-70a4-4653-8dc7-f5ba3918326f");
 
 module.exports = {
   name: 'prodia',
   description: 'Generate AI art using the Prodia SDXL models.',
   usage: '/prodia <prompt>:<model number>',
   author: 'Your Name',
+
+  async getSDXLModels() {
+    try {
+      const response = await axios.get('https://api.prodia.com/v1/sdxl/models', {
+        headers: {
+          accept: 'application/json',
+          'X-Prodia-Key': 'eaca0864-70a4-4653-8dc7-f5ba3918326f'
+        }
+      });
+      return response.data; // Returns an array of models
+    } catch (error) {
+      console.error('Error fetching models:', error.message);
+      return null;
+    }
+  },
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const userInput = args.join(' ');
@@ -21,7 +37,7 @@ module.exports = {
     }
 
     try {
-      const models = await getSDXLModels(); // Fetching available models dynamically
+      const models = await this.getSDXLModels(); // Fetching available models dynamically
 
       if (!models || models.length === 0) {
         return sendMessage(senderId, { text: '❌ No available models found. Please try again later.' }, pageAccessToken);
@@ -29,7 +45,7 @@ module.exports = {
 
       let model;
       if (modelIndex && !isNaN(parseInt(modelIndex)) && parseInt(modelIndex) >= 0 && parseInt(modelIndex) < models.length) {
-        model = models[parseInt(modelIndex)]; // Use the specified model
+        model = models[parseInt(modelIndex)]; // Use the model name based on the provided index
       } else {
         model = models[Math.floor(Math.random() * models.length)]; // Randomly select a model
       }
@@ -37,9 +53,6 @@ module.exports = {
       // Log the selected model for debugging
       console.log('Prompt:', prompt);
       console.log('Selected Model:', model);
-
-      // Inform the user that the image is being generated
-      await sendMessage(senderId, { text: '⚡ Generating your image. Please wait...' }, pageAccessToken);
 
       // Define style presets
       const stylePresets = [
@@ -51,6 +64,9 @@ module.exports = {
       // Randomly select a style preset
       const stylePreset = stylePresets[Math.floor(Math.random() * stylePresets.length)];
 
+      // Inform the user that the image is being generated
+      await sendMessage(senderId, { text: '⚡ Generating your image using the style: ' + stylePreset + '. Please wait...' }, pageAccessToken);
+
       // Generate the image with the selected model and style
       const result = await generateImageSDXL({
         prompt: prompt,
@@ -61,7 +77,7 @@ module.exports = {
       const image = await wait(result);
       const imageUrl = image.url;  // Get the image URL from the response
 
-      // Send the image directly using the image URL
+      // Send the image separately from the text
       await sendMessage(senderId, {
         attachment: {
           type: 'image',
