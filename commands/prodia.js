@@ -7,7 +7,6 @@ module.exports = {
   usage: '/generateProdiaArt <prompt>:<model number>',
   author: 'Your Name',
 
-  // List of Prodia models with model numbers
   models: [
     "1: 3Guofeng3_v34.safetensors [50f420de]",
     "2: absolutereality_V16.safetensors [37db0fc3]",
@@ -79,7 +78,6 @@ module.exports = {
     let [prompt, modelIndex] = userInput.split(':');
     prompt = prompt ? prompt.trim() : null;
 
-    // If no input provided, send the usage and available models
     if (!prompt) {
       const modelList = this.models.join('\n');
       return sendMessage(
@@ -91,30 +89,25 @@ module.exports = {
       );
     }
 
-    // Select a model based on the user input or randomly if no valid model is provided
     let model;
     if (modelIndex && !isNaN(parseInt(modelIndex)) && parseInt(modelIndex) > 0 && parseInt(modelIndex) <= this.models.length) {
-      model = this.models[parseInt(modelIndex) - 1].split(':')[1].trim().split(' ')[0]; // Extract model name by number
+      model = this.models[parseInt(modelIndex) - 1].split(':')[1].trim().split(' ')[0];
     } else {
-      // Choose a random model if no valid model number is specified
       model = this.models[Math.floor(Math.random() * this.models.length)].split(':')[1].trim().split(' ')[0];
     }
 
     try {
-      // Inform the user that the image is being generated
       await sendMessage(senderId, { text: `⚡ Generating your image with the model: ${model}. Please wait...` }, pageAccessToken);
 
-      // Generate the image using Prodia API
+      // Make the Prodia API call
       const result = await prodia(prompt, model);
 
-      // Check for a valid response
       if (result && result.image_url) {
-        // Send the image back to the user
         await sendMessage(senderId, {
           attachment: {
             type: 'image',
             payload: {
-              url: result.image_url, // Send the generated image
+              url: result.image_url,
               is_reusable: true
             }
           }
@@ -123,8 +116,19 @@ module.exports = {
         throw new Error('Failed to generate image.');
       }
     } catch (error) {
-      console.error('Error generating image:', error.message);
-      sendMessage(senderId, { text: '❌ There was an error generating your image. Please try again later.' }, pageAccessToken);
+      console.error('Error fetching ProdIA response:', error.message);
+
+      if (error.response && error.response.status === 400) {
+        // Handle specific error details
+        await sendMessage(senderId, {
+          text: `❌ Error 400: Bad Request. Please ensure your prompt is valid and try again.`
+        }, pageAccessToken);
+      } else {
+        // General error response
+        await sendMessage(senderId, {
+          text: '❌ There was an error generating your image. Please try again later.'
+        }, pageAccessToken);
+      }
     }
   }
 };
