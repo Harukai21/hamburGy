@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { Prodia } = require("prodia.js");
-const { generateImageSDXL, wait } = Prodia("eaca0864-70a4-4653-8dc7-f5ba3918326f");
+const { generateImageSDXL, wait } = Prodia("b408acb2-1345-4337-9c59-442e1e1893cc");
 
 module.exports = {
   name: 'prodia',
