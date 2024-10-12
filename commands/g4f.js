@@ -10,7 +10,6 @@ module.exports = {
   author: 'Your Name',
 
   async getAvailableProviders() {
-    // Define the list of ACTIVE providers with their description and status
     return [
       { name: 'Emi', description: 'Whimsical cartoon style.', status: 'Active' },
       { name: 'Dalle', description: 'Realistic, intricate details.', status: 'Active' },
@@ -22,13 +21,33 @@ module.exports = {
   },
 
   async getAvailableModels(provider) {
-    // Define available models per ACTIVE provider
     const models = {
       Prodia: 'ICantBelieveItsNotPhotography_seco.safetensors [4e7a3dfd]',
-      StableDiffusionLite: 'folk-art',
+      StableDiffusionLite: null, // No model for this provider
       StableDiffusionPlus: 'impressionism'
     };
-    return models[provider] || null; // Return the model based on the provider
+    return models[provider] || null;
+  },
+
+  getProviderOptions(provider) {
+    // Return specific provider options based on which provider is selected
+    switch (provider) {
+      case 'Prodia':
+        return {
+          height: 1024,
+          width: 1024,
+          samplingSteps: 20,
+          cfgScale: 30
+        };
+      case 'StableDiffusionLite':
+        return {}; // StableDiffusionLite doesn't support additional options
+      case 'StableDiffusionPlus':
+        return {
+          saGuidanceScale: 9
+        };
+      default:
+        return {};
+    }
   },
 
   getRandomProviderAndModel() {
@@ -37,7 +56,7 @@ module.exports = {
       { name: 'Dalle', description: 'Realistic, intricate details.' },
       { name: 'DalleMini', description: 'Abstract, vibrant colors.' },
       { name: 'Prodia', description: 'Photorealistic, detailed and lifelike.', model: 'ICantBelieveItsNotPhotography_seco.safetensors [4e7a3dfd]' },
-      { name: 'StableDiffusionLite', description: 'Folk art, naive style.', model: 'folk-art' },
+      { name: 'StableDiffusionLite', description: 'Folk art, naive style.' },
       { name: 'StableDiffusionPlus', description: 'Impressionism, visible brushstrokes.', model: 'impressionism' }
     ];
 
@@ -47,14 +66,13 @@ module.exports = {
 
   async generateImage(prompt, provider, model, options = {}) {
     try {
-      // Generate the image using the G4F package
+      const providerOptions = this.getProviderOptions(provider); // Get specific provider options
       const base64Image = await g4f.imageGeneration(prompt, {
         debug: true,
         provider: g4f.providers[provider],
-        providerOptions: { ...options, model } // Use providerOptions with model and other options
+        providerOptions: { ...providerOptions, model } // Merge providerOptions with the selected model
       });
 
-      // Save the generated image to a file
       fs.writeFile('generated_image.jpg', base64Image, { encoding: 'base64' }, function(err) {
         if (err) {
           console.error('Error saving the image:', err);
@@ -98,21 +116,13 @@ module.exports = {
       model = customModel || await this.getAvailableModels(selectedProvider);
     }
 
-    // Define options dynamically based on the provider and the documentation provided
-    const options = {
-      height: selectedProvider === 'Prodia' ? 1024 : 512, // Example based on Prodia
-      width: selectedProvider === 'Prodia' ? 1024 : 512,
-      samplingSteps: selectedProvider === 'Prodia' ? 20 : 15,
-      cfgScale: selectedProvider === 'Prodia' ? 30 : 7
-    };
-
-    // Send a message informing the user that the image is being generated
+    // Inform the user about the image generation process
     await sendMessage(senderId, {
       text: `Generating an image using provider: ${selectedProvider} and model: ${model || 'default'}. Please wait...`
     }, pageAccessToken);
 
-    // Generate the image using the selected provider, model, and options
-    const result = await this.generateImage(prompt, selectedProvider, model, options);
+    // Generate the image
+    const result = await this.generateImage(prompt, selectedProvider, model);
 
     // Send the result to the user
     await sendMessage(senderId, { text: result }, pageAccessToken);
