@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { Prodia } = require("prodia.js");
-const { generateImageSDXL, wait } = Prodia("b408acb2-1345-4337-9c59-442e1e1893cc");
+const { generateImageSDXL, wait } = Prodia("eaca0864-70a4-4653-8dc7-f5ba3918326f");
 
 module.exports = {
   name: 'prodia',
@@ -21,6 +21,39 @@ module.exports = {
       console.error('Error fetching models:', error.message);
       return null;
     }
+  },
+
+  // Function to poll for the job status until it completes
+  async pollJobStatus(jobId) {
+    const maxRetries = 10;
+    const delay = 3000; // 3 seconds between each poll
+    let retries = 0;
+
+    while (retries < maxRetries) {
+      retries += 1;
+      try {
+        const result = await axios.get(`https://api.prodia.com/v1/job/${jobId}`, {
+          headers: {
+            accept: 'application/json',
+            'X-Prodia-Key': 'eaca0864-70a4-4653-8dc7-f5ba3918326f'
+          }
+        });
+
+        // Check if the job is completed and return the result if ready
+        if (result.data.status === 'completed' && result.data.output) {
+          return result.data.output; // This should contain the image URL
+        }
+
+        console.log(`Job status: ${result.data.status}. Retrying... (${retries}/${maxRetries})`);
+
+        // Wait before checking again
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } catch (error) {
+        console.error('Error polling job status:', error.message);
+      }
+    }
+
+    throw new Error('Image generation timed out. Please try again later.');
   },
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
@@ -80,8 +113,12 @@ module.exports = {
       // Log the raw response from Prodia
       console.log('Prodia Response:', result);
 
-      const image = await wait(result);
-      const imageUrl = image.url;  // Get the image URL from the response
+      if (!result.job) {
+        throw new Error('No job ID received from Prodia. Something went wrong.');
+      }
+
+      // Poll the job status until it's complete and we get the image URL
+      const imageUrl = await this.pollJobStatus(result.job);
 
       // Debugging: Log the generated image URL
       console.log('Generated Image URL:', imageUrl);
