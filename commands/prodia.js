@@ -1,5 +1,5 @@
 const { Prodia } = require("prodia.js");
-const { generateImageSDXL, wait } = Prodia("eaca0864-70a4-4653-8dc7-f5ba3918326f");
+const { generateImageSDXL, wait } = Prodia("x-x-x-x-x");
 
 const models = [
   "animagineXLV3_v30.safetensors [75f2f05b]",
@@ -44,6 +44,10 @@ module.exports = {
       model = models[Math.floor(Math.random() * models.length)].split(' ')[0]; // Random model
     }
 
+    // Log prompt and model for debugging
+    console.log('Prompt:', prompt);
+    console.log('Model:', model);
+
     try {
       const processingMessage = await sendMessage(senderId, { text: '⚡ Generating your image. Please wait...' }, pageAccessToken);
 
@@ -52,6 +56,9 @@ module.exports = {
         model: model,
         style_preset: "photographic"
       });
+
+      // Log the result to check for issues
+      console.log('Generation result:', result);
 
       const image = await wait(result);
       const imageUrl = image.url;  // Directly use the URL from the API response
@@ -70,7 +77,7 @@ module.exports = {
       await sendMessage(senderId, { text: '🎨 Image generation complete!' }, pageAccessToken);
 
     } catch (error) {
-      console.error('Error generating image:', error);
+      console.error('Error generating image:', error.message); // Log just the error message for clarity
       sendMessage(senderId, { text: '❌ There was an error generating your image. Please try again later.' }, pageAccessToken);
     }
   }
