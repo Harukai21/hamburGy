@@ -23,6 +23,7 @@
     "fs-extra": "^11.2.0",
     "form-data": "^4.0.0",
     "g4f": "^1.4.6",
+    "globalsprak": "^1.0.6",
     "groq-sdk": "^0.6.1",
     "llyrics": "^1.1.7",
     "nayan-media-downloader": "^2.6.2",
