@@ -1,75 +1,63 @@
 const { Prodia } = require("prodia.js");
-const { generateImageSDXL, wait } = Prodia("eaca0864-70a4-4653-8dc7-f5ba3918326f");
-
-const models = [
-  "animagineXLV3_v30.safetensors",
-  "devlishphotorealism_sdxl15.safetensors",
-  "dreamshaperXL10_alpha2.safetensors",
-  "dynavisionXL_0411.safetensors",
-  "juggernautXL_v45.safetensors",
-  "realismEngineSDXL_v10.safetensors",
-  "realvisxlV40.safetensors",
-  "sd_xl_base_1.0.safetensors",
-  "sd_xl_base_1.0_inpainting_0.1.safetensors",
-  "turbovisionXL_v431.safetensors"
-];
+const { generateImageSDXL, getSDXLModels, wait } = Prodia("eaca0864-70a4-4653-8dc7-f5ba3918326f");
 
 module.exports = {
   name: 'prodia',
   description: 'Generate AI art using the Prodia SDXL models.',
   usage: '/prodia <prompt>:<model number>',
   author: 'Your Name',
-  
+
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const userInput = args.join(' ');
-
-    // Split prompt and model number if provided
     let [prompt, modelIndex] = userInput.split(':');
     prompt = prompt ? prompt.trim() : null;
 
     if (!prompt) {
-      const modelsList = models.map((model, index) => `${index}. ${model}`).join('\n');
       return sendMessage(
         senderId, 
-        { text: `Please provide a prompt.\n\nUsage: /prodia {prompt}\nExample: /prodia a beautiful landscape\n\nOr specify a model: /prodia {prompt}:{model number}\nExample: /prodia a beautiful landscape:5\n\nModels:\n${modelsList}` },
+        { text: `Please provide a prompt.\n\nUsage: /prodia {prompt}\nExample: /prodia a beautiful landscape\n\nOr specify a model: /prodia {prompt}:{model number}` },
         pageAccessToken
       );
     }
 
-    // Select random model if not provided
-    let model;
-    if (modelIndex && !isNaN(parseInt(modelIndex)) && parseInt(modelIndex) >= 0 && parseInt(modelIndex) < models.length) {
-      model = models[parseInt(modelIndex)]; // Removed hash part from models
-    } else {
-      model = models[Math.floor(Math.random() * models.length)]; // Random model
-    }
-
-    // Log prompt and model for debugging
-    console.log('Prompt:', prompt);
-    console.log('Model:', model);
-
     try {
-      const processingMessage = await sendMessage(senderId, { text: '⚡ Generating your image. Please wait...' }, pageAccessToken);
+      const models = await getSDXLModels(); // Fetching available models dynamically
 
+      if (!models || models.length === 0) {
+        return sendMessage(senderId, { text: '❌ No available models found. Please try again later.' }, pageAccessToken);
+      }
+
+      let model;
+      if (modelIndex && !isNaN(parseInt(modelIndex)) && parseInt(modelIndex) >= 0 && parseInt(modelIndex) < models.length) {
+        model = models[parseInt(modelIndex)]; // Use the specified model
+      } else {
+        model = models[Math.floor(Math.random() * models.length)]; // Randomly select a model
+      }
+
+      // Log the selected model for debugging
+      console.log('Prompt:', prompt);
+      console.log('Selected Model:', model);
+
+      // Inform the user that the image is being generated
+      await sendMessage(senderId, { text: '⚡ Generating your image. Please wait...' }, pageAccessToken);
+
+      // Generate the image with the selected model
       const result = await generateImageSDXL({
         prompt: prompt,
         model: model,
-        style_preset: "photographic"
+        style_preset: "photographic" // You can change this based on your requirements
       });
 
-      // Log the result to check for issues
-      console.log('Generation result:', result);
-
       const image = await wait(result);
-      const imageUrl = image.url;  // Directly use the URL from the API response
+      const imageUrl = image.url;  // Get the image URL from the response
 
       // Send the image directly using the image URL
       await sendMessage(senderId, {
         attachment: {
           type: 'image',
           payload: {
-            url: imageUrl, // Send the image without downloading
-            is_reusable: true // Optional: set to reusable for future use
+            url: imageUrl, // Directly send the generated image
+            is_reusable: true // Optional: make it reusable
           }
         }
       }, pageAccessToken);
@@ -77,7 +65,7 @@ module.exports = {
       await sendMessage(senderId, { text: '🎨 Image generation complete!' }, pageAccessToken);
 
     } catch (error) {
-      console.error('Error generating image:', error.message); // Log just the error message for clarity
+      console.error('Error generating image:', error.message);
       sendMessage(senderId, { text: '❌ There was an error generating your image. Please try again later.' }, pageAccessToken);
     }
   }
