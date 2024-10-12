@@ -3,9 +3,9 @@ const cheerio = require('cheerio');
 
 module.exports = {
   name: 'lyrics',
-  description: 'search for lyrics from Google or Musixmatch',
+  description: 'search for lyrics from Google or fallback to Musixmatch',
   usage: '/lyrics <SongTitle>',
-  author: 'biru',
+  author: 'August Quinn',
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const songTitle = args.join(' ');
 
@@ -18,7 +18,6 @@ module.exports = {
       const headers = { 'User-Agent': 'Mozilla/5.0' };
       let lyrics = null;
       let artist = null;
-      let imageUrl = null; // Store the image URL
 
       // First attempt: Fetch lyrics from Google
       try {
@@ -32,7 +31,6 @@ module.exports = {
           const parse = cheerio.load(content);
           lyrics = parse('span[jsname]').text();
           artist = $('div.auw0zb').text() || 'Unknown';
-          imageUrl = $('g-img img').attr('src'); // Extract image URL from Google response
         }
       } catch (googleError) {
         console.log('Google lyrics fetch failed, trying Musixmatch...');
@@ -50,7 +48,6 @@ module.exports = {
             const mxmResponse = await axios.get(mxmUrl, { headers });
             lyrics = cheerio.load(mxmResponse.data)('.lyrics__content__ok').text();
             artist = cheerio.load(mxmResponse.data)('.mxm-track-title__artist-link').text() || 'Unknown';
-            imageUrl = cheerio.load(mxmResponse.data)('.banner-album-image-desktop img').attr('src'); // Extract image from Musixmatch response
           }
         } catch (musixmatchError) {
           console.log('Musixmatch lyrics fetch failed:', musixmatchError);
@@ -60,7 +57,7 @@ module.exports = {
       // Check if lyrics were found
       if (lyrics) {
         const lyricsMessage = `🎶 *${songTitle}* by ${artist}\n\n${lyrics}`;
-
+        
         // Split the lyrics message into chunks if it exceeds 2000 characters
         const maxMessageLength = 2000;
         if (lyricsMessage.length > maxMessageLength) {
@@ -70,21 +67,6 @@ module.exports = {
           }
         } else {
           sendMessage(senderId, { text: lyricsMessage }, pageAccessToken);
-        }
-
-        // Send the image immediately after the lyrics
-        if (imageUrl) {
-          sendMessage(senderId, {
-            attachment: {
-              type: 'image',
-              payload: {
-                url: imageUrl, // Use the dynamically extracted image URL
-                is_reusable: true
-              }
-            }
-          }, pageAccessToken).catch(err => {
-            console.error('Error sending image:', err);
-          });
         }
       } else {
         sendMessage(senderId, { text: 'Sorry, no lyrics were found for your query.' }, pageAccessToken);
