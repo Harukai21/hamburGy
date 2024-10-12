@@ -91,9 +91,9 @@ module.exports = {
 
     let model;
     if (modelIndex && !isNaN(parseInt(modelIndex)) && parseInt(modelIndex) > 0 && parseInt(modelIndex) <= this.models.length) {
-      model = this.models[parseInt(modelIndex) - 1].split(':')[1].trim().split(' ')[0];
+      model = this.models[parseInt(modelIndex) - 1].split(':')[0].trim(); // Send only the model number
     } else {
-      model = this.models[Math.floor(Math.random() * this.models.length)].split(':')[1].trim().split(' ')[0];
+      model = this.models[Math.floor(Math.random() * this.models.length)].split(':')[0].trim();
     }
 
     try {
