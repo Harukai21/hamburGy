@@ -27,6 +27,7 @@
     "llyrics": "^1.1.7",
     "nayan-media-downloader": "^2.6.2",
     "node-fetch": "^3.3.2",
+    "prodia.js": "^3.0.0",
     "request": "^2.88.2",
     "uri-js": "^4.4.1",
     "winston": "^3.13.0",
