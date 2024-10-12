@@ -16,9 +16,9 @@ const models = [
 ];
 
 module.exports = {
-  name: 'prodia',
+  name: 'imagine',
   description: 'Generate AI art using the Prodia SDXL models.',
-  usage: '/prodia <prompt>:<model number>',
+  usage: '/imagine <prompt>:<model number>',
   author: 'BIRU',
   
   async execute(senderId, args, pageAccessToken, sendMessage) {
@@ -43,7 +43,7 @@ module.exports = {
       const modelsList = models.map((model) => `${model}`).join('\n');
       return sendMessage(
         senderId, 
-        { text: `Please provide a prompt.\n\nUsage: /prodia {prompt}\nExample: /prodia a beautiful landscape\n\nOr specify a model: /prodia {prompt}:{model number}\nExample: /prodia a beautiful landscape:5\n\nModels:\n${modelsList}` },
+        { text: `Please provide a prompt.\n\nUsage: /imagine {prompt}\nExample: /imagine a beautiful landscape\n\nOr specify a model: /imagine {prompt}:{model number}\nExample: /imagine a beautiful landscape:5\n\nModels:\n${modelsList}` },
         pageAccessToken
       );
     }
