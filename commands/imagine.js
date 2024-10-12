@@ -19,7 +19,7 @@ module.exports = {
   name: 'prodia',
   description: 'Generate AI art using the Prodia SDXL models.',
   usage: '/prodia <prompt>:<model number>',
-  author: 'Your Name',
+  author: 'BIRU',
   
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const prompt = args.join(' ');
