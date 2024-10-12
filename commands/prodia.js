@@ -2,16 +2,16 @@ const { Prodia } = require("prodia.js");
 const { generateImageSDXL, wait } = Prodia("eaca0864-70a4-4653-8dc7-f5ba3918326f");
 
 const models = [
-  "animagineXLV3_v30.safetensors [75f2f05b]",
-  "devlishphotorealism_sdxl15.safetensors [77cba69f]",
-  "dreamshaperXL10_alpha2.safetensors [c8afe2ef]",
-  "dynavisionXL_0411.safetensors [c39cc051]",
-  "juggernautXL_v45.safetensors [e75f5471]",
-  "realismEngineSDXL_v10.safetensors [af771c3f]",
-  "realvisxlV40.safetensors [f7fdcb51]",
-  "sd_xl_base_1.0.safetensors [be9edd61]",
-  "sd_xl_base_1.0_inpainting_0.1.safetensors [5679a81a]",
-  "turbovisionXL_v431.safetensors [78890989]"
+  "animagineXLV3_v30.safetensors",
+  "devlishphotorealism_sdxl15.safetensors",
+  "dreamshaperXL10_alpha2.safetensors",
+  "dynavisionXL_0411.safetensors",
+  "juggernautXL_v45.safetensors",
+  "realismEngineSDXL_v10.safetensors",
+  "realvisxlV40.safetensors",
+  "sd_xl_base_1.0.safetensors",
+  "sd_xl_base_1.0_inpainting_0.1.safetensors",
+  "turbovisionXL_v431.safetensors"
 ];
 
 module.exports = {
@@ -39,9 +39,9 @@ module.exports = {
     // Select random model if not provided
     let model;
     if (modelIndex && !isNaN(parseInt(modelIndex)) && parseInt(modelIndex) >= 0 && parseInt(modelIndex) < models.length) {
-      model = models[parseInt(modelIndex)].split(' ')[0]; // Get model name part
+      model = models[parseInt(modelIndex)]; // Removed hash part from models
     } else {
-      model = models[Math.floor(Math.random() * models.length)].split(' ')[0]; // Random model
+      model = models[Math.floor(Math.random() * models.length)]; // Random model
     }
 
     // Log prompt and model for debugging
