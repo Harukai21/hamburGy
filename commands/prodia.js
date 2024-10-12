@@ -50,7 +50,7 @@ module.exports = {
         model = models[Math.floor(Math.random() * models.length)]; // Randomly select a model
       }
 
-      // Log the selected model for debugging
+      // Log the selected model and prompt for debugging
       console.log('Prompt:', prompt);
       console.log('Selected Model:', model);
 
@@ -67,12 +67,18 @@ module.exports = {
       // Inform the user that the image is being generated
       await sendMessage(senderId, { text: '⚡ Generating your image using the style: ' + stylePreset + '. Please wait...' }, pageAccessToken);
 
+      // Log what is being sent to Prodia
+      console.log('Sending to Prodia - Prompt:', prompt, ', Model:', model, ', Style:', stylePreset);
+
       // Generate the image with the selected model and style
       const result = await generateImageSDXL({
         prompt: prompt,
         model: model,
         style_preset: stylePreset // Use the randomly selected style preset
       });
+
+      // Log the raw response from Prodia
+      console.log('Prodia Response:', result);
 
       const image = await wait(result);
       const imageUrl = image.url;  // Get the image URL from the response
