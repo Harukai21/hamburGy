@@ -1,71 +1,69 @@
 const { Prodia } = require("prodia.js");
-const { generateImageSDXL, getSDXLModels, wait } = Prodia("eaca0864-70a4-4653-8dc7-f5ba3918326f");
+const { generateImageSDXL, wait, getSDXLModels } = Prodia("eaca0864-70a4-4653-8dc7-f5ba3918326f");
 
 module.exports = {
   name: 'prodia',
-  description: 'Generate AI art using the Prodia SDXL models.',
-  usage: '/prodia <prompt>:<model number>',
-  author: 'Your Name',
-
+  description: 'Generate AI images with Prodia.',
+  usage: '/prodia <prompt>[:<model number>]',
+  author: 'Biru',
   async execute(senderId, args, pageAccessToken, sendMessage) {
-    const userInput = args.join(' ');
-    let [prompt, modelIndex] = userInput.split(':');
-    prompt = prompt ? prompt.trim() : null;
+    const models = [
+      "0. animagineXLV3_v30.safetensors [75f2f05b]",
+      "1. devlishphotorealism_sdxl15.safetensors [77cba69f]",
+      "2. dreamshaperXL10_alpha2.safetensors [c8afe2ef]",
+      "3. dynavisionXL_0411.safetensors [c39cc051]",
+      "4. juggernautXL_v45.safetensors [e75f5471]",
+      "5. realismEngineSDXL_v10.safetensors [af771c3f]",
+      "6. realvisxlV40.safetensors [f7fdcb51]",
+      "7. sd_xl_base_1.0.safetensors [be9edd61]",
+      "8. sd_xl_base_1.0_inpainting_0.1.safetensors [5679a81a]",
+      "9. turbovisionXL_v431.safetensors [78890989]"
+    ];
 
-    if (!prompt) {
+    let prompt = args.join(' ');
+    let model = models[7].split(' ')[1]; // Default model: sd_xl_base_1.0
+
+    if (prompt.includes(':')) {
+      const parts = prompt.split(':');
+      prompt = parts[0].trim();
+
+      const modelNumber = parseInt(parts[1].trim());
+      if (!isNaN(modelNumber) && modelNumber >= 0 && modelNumber < models.length) {
+        model = models[modelNumber].split(' ')[1];
+      } else {
+        return sendMessage(senderId, { text: '❗ Invalid model number. Use a number between 0 and 9.' }, pageAccessToken);
+      }
+    } else if (!prompt) {
+      const modelList = models.map((model) => `${model}`).join('\n');
       return sendMessage(
-        senderId, 
-        { text: `Please provide a prompt.\n\nUsage: /prodia {prompt}\nExample: /prodia a beautiful landscape\n\nOr specify a model: /prodia {prompt}:{model number}` },
+        senderId,
+        { text: `Please provide a prompt.\nAvailable models:\n\n${modelList}` },
         pageAccessToken
       );
     }
 
     try {
-      const models = await getSDXLModels(); // Fetching available models dynamically
-
-      if (!models || models.length === 0) {
-        return sendMessage(senderId, { text: '❌ No available models found. Please try again later.' }, pageAccessToken);
-      }
-
-      let model;
-      if (modelIndex && !isNaN(parseInt(modelIndex)) && parseInt(modelIndex) >= 0 && parseInt(modelIndex) < models.length) {
-        model = models[parseInt(modelIndex)]; // Use the specified model
-      } else {
-        model = models[Math.floor(Math.random() * models.length)]; // Randomly select a model
-      }
-
-      // Log the selected model for debugging
-      console.log('Prompt:', prompt);
-      console.log('Selected Model:', model);
-
-      // Inform the user that the image is being generated
-      await sendMessage(senderId, { text: '⚡ Generating your image. Please wait...' }, pageAccessToken);
-
-      // Generate the image with the selected model
       const result = await generateImageSDXL({
         prompt: prompt,
         model: model,
-        style_preset: "photographic" // You can change this based on your requirements
+        style_preset: 'photographic',
       });
 
-      const image = await wait(result);
-      const imageUrl = image.url;  // Get the image URL from the response
+      const imageUrl = await wait(result);
 
-      // Send the image directly using the image URL
-      await sendMessage(senderId, {
+      // Send image without any additional text
+      sendMessage(senderId, {
         attachment: {
           type: 'image',
           payload: {
-            url: imageUrl, // Directly send the generated image
-            is_reusable: true // Optional: make it reusable
+            url: imageUrl,
+            is_reusable: true,
           }
         }
       }, pageAccessToken);
 
-      await sendMessage(senderId, { text: '🎨 Image generation complete!' }, pageAccessToken);
-
     } catch (error) {
-      console.error('Error generating image:', error.message);
+      console.error('Error generating image:', error);
       sendMessage(senderId, { text: '❌ There was an error generating your image. Please try again later.' }, pageAccessToken);
     }
   }
