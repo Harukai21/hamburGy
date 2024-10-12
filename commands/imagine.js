@@ -1,61 +1,55 @@
 const { Prodia } = require("prodia.js");
-
 const { generateImageSDXL, wait } = Prodia("eaca0864-70a4-4653-8dc7-f5ba3918326f");
 
 const models = [
-  "0. animagineXLV3_v30.safetensors [75f2f05b]",
-  "1. devlishphotorealism_sdxl15.safetensors [77cba69f]",
-  "2. dreamshaperXL10_alpha2.safetensors [c8afe2ef]",
-  "3. dynavisionXL_0411.safetensors [c39cc051]",
-  "4. juggernautXL_v45.safetensors [e75f5471]",
-  "5. realismEngineSDXL_v10.safetensors [af771c3f]",
-  "6. realvisxlV40.safetensors [f7fdcb51]",
-  "7. sd_xl_base_1.0.safetensors [be9edd61]",
-  "8. sd_xl_base_1.0_inpainting_0.1.safetensors [5679a81a]",
-  "9. turbovisionXL_v431.safetensors [78890989]"
+  "animagineXLV3_v30.safetensors [75f2f05b]",
+  "devlishphotorealism_sdxl15.safetensors [77cba69f]",
+  "dreamshaperXL10_alpha2.safetensors [c8afe2ef]",
+  "dynavisionXL_0411.safetensors [c39cc051]",
+  "juggernautXL_v45.safetensors [e75f5471]",
+  "realismEngineSDXL_v10.safetensors [af771c3f]",
+  "realvisxlV40.safetensors [f7fdcb51]",
+  "sd_xl_base_1.0.safetensors [be9edd61]",
+  "sd_xl_base_1.0_inpainting_0.1.safetensors [5679a81a]",
+  "turbovisionXL_v431.safetensors [78890989]"
 ];
 
 module.exports = {
-  name: 'imagine',
+  name: 'prodia',
   description: 'Generate AI art using the Prodia SDXL models.',
-  usage: '/imagine <prompt>:<model number>',
-  author: 'BIRU',
+  usage: '/prodia <prompt>:<model number>',
+  author: 'Your Name',
   
   async execute(senderId, args, pageAccessToken, sendMessage) {
-    const prompt = args.join(' ');
+    const userInput = args.join(' ');
 
-    let model = Math.floor(Math.random() * models.length).toString(); // Random model if not provided
-
-    // Check if the prompt includes a model number
-    if (prompt.includes(':')) {
-      const parts = prompt.split(':');
-      const queryPrompt = parts[0].trim();
-      const modelNumber = parseInt(parts[1].trim());
-
-      if (!isNaN(modelNumber) && modelNumber >= 0 && modelNumber < models.length) {
-        model = modelNumber.toString();
-      } else {
-        return sendMessage(senderId, { text: '❗ Invalid model number. Use a model number between 0 and 9.' }, pageAccessToken);
-      }
-    }
+    // Split prompt and model number if provided
+    let [prompt, modelIndex] = userInput.split(':');
+    prompt = prompt ? prompt.trim() : null;
 
     if (!prompt) {
-      const modelsList = models.map((model) => `${model}`).join('\n');
+      const modelsList = models.map((model, index) => `${index}. ${model}`).join('\n');
       return sendMessage(
         senderId, 
-        { text: `Please provide a prompt.\n\nUsage: /imagine {prompt}\nExample: /imagine a beautiful landscape\n\nOr specify a model: /imagine {prompt}:{model number}\nExample: /imagine a beautiful landscape:5\n\nModels:\n${modelsList}` },
+        { text: `Please provide a prompt.\n\nUsage: /prodia {prompt}\nExample: /prodia a beautiful landscape\n\nOr specify a model: /prodia {prompt}:{model number}\nExample: /prodia a beautiful landscape:5\n\nModels:\n${modelsList}` },
         pageAccessToken
       );
+    }
+
+    // Select random model if not provided
+    let model;
+    if (modelIndex && !isNaN(parseInt(modelIndex)) && parseInt(modelIndex) >= 0 && parseInt(modelIndex) < models.length) {
+      model = models[parseInt(modelIndex)].split(' ')[0]; // Get model name part
+    } else {
+      model = models[Math.floor(Math.random() * models.length)].split(' ')[0]; // Random model
     }
 
     try {
       const processingMessage = await sendMessage(senderId, { text: '⚡ Generating your image. Please wait...' }, pageAccessToken);
 
-      const modelString = models[parseInt(model)].split(' ')[0]; // Get model identifier
-
       const result = await generateImageSDXL({
         prompt: prompt,
-        model: modelString,
+        model: model,
         style_preset: "photographic"
       });
 
