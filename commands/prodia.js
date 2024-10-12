@@ -1,5 +1,5 @@
 const { Prodia } = require("prodia.js");
-const { generateImageSDXL, wait } = Prodia("x-x-x-x-x");
+const { generateImageSDXL, wait } = Prodia("eaca0864-70a4-4653-8dc7-f5ba3918326f");
 
 const models = [
   "animagineXLV3_v30.safetensors [75f2f05b]",
