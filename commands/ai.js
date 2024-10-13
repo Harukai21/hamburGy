@@ -36,8 +36,12 @@ module.exports = {
         userHistory.push({ role: 'user', content: messageText });
         responseMessage = await getGlobalsprakResponse(userHistory);
 
+        // Log the response from Globalsprak
+        console.log("Globalsprak Response:", responseMessage);
+
         if (!responseMessage) {
           responseMessage = await getGroqResponse(userHistory);
+          console.log("Fallback to Groq Response:", responseMessage);
         }
       } else {
         responseMessage = "Sorry, I couldn't process your request. Please send a valid message or image.";
@@ -54,6 +58,8 @@ module.exports = {
       sendTwoChunksIfNecessary(senderId, cleanMessage, pageAccessToken, sendMessage);
 
     } catch (error) {
+      // Log the actual error
+      console.error("Error in AI Execution:", error);
       sendMessage(senderId, { text: "I'm busy right now, please try again later." }, pageAccessToken);
     }
   }
@@ -80,6 +86,7 @@ async function handleImageWithGemini(imageUrl) {
       return "Sorry, I couldn't generate a description for the image.";
     }
   } catch (error) {
+    console.error("Error in handleImageWithGemini:", error);
     return "Sorry, I couldn't analyze the image. Please try again.";
   }
 }
@@ -92,7 +99,7 @@ async function getGlobalsprakResponse(userHistory) {
     const response = await ai(prompt, model);
     return response;
   } catch (error) {
-    console.log("Globalsprak Error:", error); // Log the error for Globalsprak
+    console.error("Globalsprak Error:", error); // Log the error for Globalsprak
     return null;
   }
 }
@@ -116,7 +123,7 @@ async function getGroqResponse(userHistory) {
     }
     return responseMessage;
   } catch (error) {
-    console.log("Groq Error:", error); // Log the error for Groq
+    console.error("Groq Error:", error); // Log the error for Groq
     return null;
   }
 }
@@ -154,7 +161,7 @@ async function GenerateGeminiAnswer(history, files) {
 
     return result;
   } catch (error) {
-    console.log("Gemini Error:", error); // Log any errors for Gemini
+    console.error("Gemini Error:", error); // Log any errors for Gemini
     return null;
   }
 }
