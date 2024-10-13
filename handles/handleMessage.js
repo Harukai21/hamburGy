@@ -12,9 +12,19 @@ for (const file of commandFiles) {
   commands.set(command.name.toLowerCase(), command); // Ensure command names are stored in lowercase
 }
 
+// Function to send typing indicator
+async function sendTypingIndicator(senderId, pageAccessToken, action) {
+  await sendMessage(senderId, {
+    sender_action: action // 'typing_on', 'typing_off', or 'mark_seen'
+  }, pageAccessToken);
+}
+
 async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
   const messageText = event.message.text.trim();
+
+  // Start typing indicator as soon as the message is received
+  await sendTypingIndicator(senderId, pageAccessToken, 'typing_on');
 
   // Check if the message starts with the command prefix
   if (messageText.startsWith(prefix)) {
@@ -27,9 +37,11 @@ async function handleMessage(event, pageAccessToken) {
         await command.execute(senderId, args, pageAccessToken, sendMessage); // Pass args as an array
       } catch (error) {
         console.error(`Error executing command ${commandName}:`, error);
-        sendMessage(senderId, { text: 'There was an error executing that command.' }, pageAccessToken);
+        await sendMessage(senderId, { text: 'There was an error executing that command.' }, pageAccessToken);
       }
     }
+    // Stop typing indicator after response is sent
+    await sendTypingIndicator(senderId, pageAccessToken, 'typing_off');
     return; // Exit after handling a command with the prefix
   }
 
@@ -40,9 +52,12 @@ async function handleMessage(event, pageAccessToken) {
       await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage); // Pass message as string
     } catch (error) {
       console.error('Error executing Ai command:', error);
-      sendMessage(senderId, { text: 'There was an error processing your request.' }, pageAccessToken);
+      await sendMessage(senderId, { text: 'There was an error processing your request.' }, pageAccessToken);
     }
   }
+
+  // Stop typing indicator after response is sent
+  await sendTypingIndicator(senderId, pageAccessToken, 'typing_off');
 }
 
 module.exports = { handleMessage };
