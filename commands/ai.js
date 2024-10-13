@@ -95,7 +95,7 @@ async function handleImageWithGemini(imageUrl) {
 async function getGlobalsprakResponse(userHistory) {
   try {
     const prompt = userHistory.map(entry => entry.content).join("\n");
-    const model = "gpt-4o-mini-free"; // Use the desired model
+    const model = "gpt-4o-2024-08-06"; // Use the desired model
     const response = await ai(prompt, model);
 
     // Ensure that we return the actual 'answer' field from the Globalsprak response
