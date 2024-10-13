@@ -24,7 +24,7 @@ module.exports = {
       // Initialize user history if not present
       let userHistory = messageHistory.get(senderId) || [];
       if (userHistory.length === 0) {
-        userHistory.push({ role: 'system', content: 'You are barry, a helpful and kind assistant that answers everything.' });
+        userHistory.push({ role: 'system', content: 'You are a helpful and kind assistant that answers everything.' });
       }
 
       let responseMessage = '';
