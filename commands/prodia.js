@@ -25,7 +25,7 @@ module.exports = {
 
   // Function to poll for the job status until it completes
   async pollJobStatus(jobId) {
-    const maxRetries = 10;
+    const maxRetries = 30;
     const delay = 3000; // 3 seconds between each poll
     let retries = 0;
 
