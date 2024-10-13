@@ -112,6 +112,7 @@ async function getGroqResponse(userHistory) {
     }
     return responseMessage;
   } catch (error) {
+    console.log("Groq Error:", error); // Log the error for Groq
     return null;
   }
 }
@@ -149,6 +150,7 @@ async function GenerateGeminiAnswer(history, files) {
 
     return result;
   } catch (error) {
+    console.log("Gemini Error:", error); // Log any errors for Gemini
     return null;
   }
 }
