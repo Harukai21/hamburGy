@@ -88,6 +88,7 @@ async function getG4FResponse(userHistory) {
     const response = await g4f.chatCompletion(userHistory);
     return response;
   } catch (error) {
+    console.log("G4F Error:", error); // Log the error for G4F
     return null;
   }
 }
