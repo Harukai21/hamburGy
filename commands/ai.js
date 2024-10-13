@@ -1,11 +1,10 @@
-const { G4F } = require("g4f");
+const { ai } = require('globalsprak');
 const Groq = require('groq-sdk');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const axios = require('axios');
 const fs = require('fs');
 
 // Initialize the APIs
-const g4f = new G4F();
 const groq = new Groq({ apiKey: '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' });
 const genAI = new GoogleGenerativeAI("AIzaSyBcyNtgDliBoVFvsHueC1NPBDCucznkwUk");
 const messageHistory = new Map();
@@ -25,7 +24,7 @@ module.exports = {
       // Initialize user history if not present
       let userHistory = messageHistory.get(senderId) || [];
       if (userHistory.length === 0) {
-        userHistory.push({ role: 'system', content: 'You are a helpful and kind assistant that answers everything.' });
+        userHistory.push({ role: 'system', content: 'You are barry, a helpful and kind assistant that answers everything.' });
       }
 
       let responseMessage = '';
@@ -35,7 +34,7 @@ module.exports = {
         responseMessage = await handleImageWithGemini(attachment.payload.url);
       } else if (messageType === 'text' && messageText) {
         userHistory.push({ role: 'user', content: messageText });
-        responseMessage = await getG4FResponse(userHistory);
+        responseMessage = await getGlobalsprakResponse(userHistory);
 
         if (!responseMessage) {
           responseMessage = await getGroqResponse(userHistory);
@@ -82,13 +81,15 @@ async function handleImageWithGemini(imageUrl) {
   }
 }
 
-// Function to get a response from the G4F API
-async function getG4FResponse(userHistory) {
+// Function to get a response from the Globalsprak AI
+async function getGlobalsprakResponse(userHistory) {
   try {
-    const response = await g4f.chatCompletion(userHistory);
+    const prompt = userHistory.map(entry => entry.content).join("\n");
+    const model = "gpt-4o-mini-free"; // Use the desired model
+    const response = await ai(prompt, model);
     return response;
   } catch (error) {
-    console.log("G4F Error:", error); // Log the error for G4F
+    console.log("Globalsprak Error:", error); // Log the error for Globalsprak
     return null;
   }
 }
