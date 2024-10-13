@@ -13,6 +13,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "@types/node": "^20.15.0",
+    "apexify.js": "^4.5.30",
     "axios": "^1.7.7",
     "body-parser": "^1.20.2",
     "cheerio": "^1.0.0-rc.12",
