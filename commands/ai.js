@@ -97,7 +97,13 @@ async function getGlobalsprakResponse(userHistory) {
     const prompt = userHistory.map(entry => entry.content).join("\n");
     const model = "gpt-4o-mini-free"; // Use the desired model
     const response = await ai(prompt, model);
-    return response;
+
+    // Ensure that we return the actual 'answer' field from the Globalsprak response
+    if (response && response.status === 'success' && response.answer) {
+      return response.answer; // Extract the answer from the response
+    } else {
+      return null; // Fallback in case there's no valid answer
+    }
   } catch (error) {
     console.error("Globalsprak Error:", error); // Log the error for Globalsprak
     return null;
