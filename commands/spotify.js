@@ -2,19 +2,27 @@ const axios = require('axios');
 
 module.exports = {
   name: 'spotify',
-  description: 'Get a Spotify link for a song',
-  author: 'Deku (rest api)',
+  description: 'downloads music from spotify.',
+  usage: '/spotify <title>',
+  author: 'Biru',
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const query = args.join(' ');
 
     try {
-      const apiUrl = `https://deku-rest-api.gleeze.com/spotify?q=${encodeURIComponent(query)}`;
+      const apiUrl = `https://spotifydl-api-54n8.onrender.com/spotifydl?search=${encodeURIComponent(query)}`;
       const response = await axios.get(apiUrl);
 
-      // Extract the Spotify link from the response
-      const spotifyLink = response.data.result;
+      // Extract song information from the response
+      const trackName = response.data.track.name;
+      const artistName = response.data.track.artist;
+      const spotifyLink = response.data.track.downloadLink;
 
       if (spotifyLink) {
+        // Send a message with the song's name, artist, and MP3 file
+        sendMessage(senderId, {
+          text: `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}`
+        }, pageAccessToken);
+
         // Send the MP3 file as an attachment
         sendMessage(senderId, {
           attachment: {

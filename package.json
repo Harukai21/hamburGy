@@ -8,21 +8,34 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "biru",
   "license": "ISC",
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
     "@types/node": "^20.15.0",
+    "apexify.js": "^4.5.30",
     "axios": "^1.7.7",
     "body-parser": "^1.20.2",
+    "cheerio": "^1.0.0-rc.12",
+    
+    
     "express": "^4.19.2",
     "fs": "^0.0.1-security",
-    "groq-sdk": "^0.5.0",
+    "fs-extra": "^11.2.0",
+    "form-data": "^4.0.0",
+    "g4f": "^1.4.6",
+    "globalsprak": "^1.0.6",
+    "groq-sdk": "^0.6.1",
+    "llyrics": "^1.1.7",
+    "nayan-media-downloader": "^2.6.2",
     "node-fetch": "^3.3.2",
+    "prodia.js": "^3.0.0",
     "request": "^2.88.2",
     "uri-js": "^4.4.1",
-    "winston": "^3.13.0"
+    "winston": "^3.13.0",
+    "youtubei": "^1.5.4"
   },
   "engines": {
-    "node": "16.14.2"
+    "node": "20.x"
   }
 }

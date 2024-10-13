@@ -1,24 +1,18 @@
-const { find } = require('llyrics');
+const axios = require('axios');
 
 module.exports = {
   name: 'lyrics',
-  description: 'search for lyrics',
-  usage: '/lyrics <SongTitle>',
+  description: '/lyrics <SongTitle>',
   author: 'Biru',
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const query = args.join(' ');
-    
     try {
-      // Call the llyrics package to find the song lyrics using Genius API
-      const response = await find({
-        song: query,
-        engine: 'musixmatch',          // Using Genius as the engine
-        geniusApiKey: 'TUoXsviG2F-cP3lzP5VtzZ3i1IjsPqHabEeqXq7LugC_1F7e0h6yZFrES7ihiaNc',
-        forceSearch: true          // Enable retry with other engines if search fails
-      });
+      const apiUrl = `http://deku-rest-api.gleeze.com/search/lyrics?q=${encodeURIComponent(query)}`;
+      const response = await axios.get(apiUrl);
+      const result = response.data.result;
 
-      if (response && response.lyrics) {
-        const lyricsMessage = `🎶 *${response.title}* by ${response.artist}\n\n${response.lyrics}`;
+      if (result && result.lyrics) {
+        const lyricsMessage = `Title: ${result.title}\nArtist: ${result.artist}\n\n${result.lyrics}`;
 
         // Split the lyrics message into chunks if it exceeds 2000 characters
         const maxMessageLength = 2000;
@@ -32,27 +26,23 @@ module.exports = {
         }
 
         // Optionally send an image if available
-        if (response.image) {
-          // Handle any type of image URL
+        if (result.image) {
           sendMessage(senderId, {
             attachment: {
               type: 'image',
               payload: {
-                url: response.image,   // URL provided from the response
-                is_reusable: true      // Mark as reusable, if necessary
+                url: result.image,
+                is_reusable: true
               }
             }
-          }, pageAccessToken)
-          .catch(err => {
-            console.error('Error sending image:', err);
-          });
+          }, pageAccessToken);
         }
       } else {
         console.error('Error: No lyrics found in the response.');
         sendMessage(senderId, { text: 'Sorry, no lyrics were found for your query.' }, pageAccessToken);
       }
     } catch (error) {
-      console.error('Error retrieving lyrics:', error);
+      console.error('Error calling Lyrics API:', error);
       sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
     }
   }

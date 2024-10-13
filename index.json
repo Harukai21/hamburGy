@@ -3,7 +3,6 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const { handleMessage } = require('./handles/handleMessage');
 const { handlePostback } = require('./handles/handlePostback');
-const { handleAttachment } = require('./handles/handleAttachment'); // Import handleAttachment
 
 const app = express();
 app.use(bodyParser.json());
@@ -38,14 +37,9 @@ app.post('/webhook', (req, res) => {
     body.entry.forEach(entry => {
       entry.messaging.forEach(event => {
         if (event.message) {
-          if (event.message.text) {
-            handleMessage(event, PAGE_ACCESS_TOKEN); // Handle text message
-          }
-          if (event.message.attachments) {
-            handleAttachment(event, PAGE_ACCESS_TOKEN); // Handle attachments
-          }
+          handleMessage(event, PAGE_ACCESS_TOKEN);
         } else if (event.postback) {
-          handlePostback(event, PAGE_ACCESS_TOKEN); // Handle postback
+          handlePostback(event, PAGE_ACCESS_TOKEN);
         }
       });
     });
@@ -60,9 +54,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-
-// Set interval to restart the system every 8 hours
-setInterval(() => {
-  console.log('Restarting the server...');
-  process.exit(0);  // Exit with success code
-}, 8 * 60 * 60 * 1000);  // 8 hours in milliseconds
