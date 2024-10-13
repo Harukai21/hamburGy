@@ -47,8 +47,11 @@ module.exports = {
       userHistory.push({ role: 'assistant', content: responseMessage });
       messageHistory.set(senderId, userHistory);
 
+      // Ensure the response is properly UTF-8 encoded and cleaned
+      const cleanMessage = Buffer.from(responseMessage, 'utf-8').toString().replace(/[^\x00-\x7F]/g, '');
+
       // Send the response message in chunks if necessary
-      sendTwoChunksIfNecessary(senderId, responseMessage, pageAccessToken, sendMessage);
+      sendTwoChunksIfNecessary(senderId, cleanMessage, pageAccessToken, sendMessage);
 
     } catch (error) {
       sendMessage(senderId, { text: "I'm busy right now, please try again later." }, pageAccessToken);
