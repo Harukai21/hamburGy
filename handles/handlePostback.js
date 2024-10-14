@@ -60,7 +60,7 @@ function handlePostback(event, pageAccessToken) {
 
   } else {
     // Fallback response if payload is not recognized
-    sendMessage(senderId, { text: `I'm not sure how to respond to that.` }, pageAccessToken);
+    sendMessage(senderId, { text: `Yes, I am. my prefix is "/", type /help to see my commands.` }, pageAccessToken);
   }
 }
 
