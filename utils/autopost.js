@@ -1,4 +1,3 @@
-// /utils/autopost.js
 const cron = require('node-cron');
 const axios = require('axios');
 
@@ -15,14 +14,12 @@ module.exports.startAutoPost = function(api) {
 
                 const formData = {
                     message: message,
+                    access_token: api.getCurrentUserID(),
                 };
 
                 await api.httpPost(
-                    `https://graph.facebook.com/v12.0/me/feed`, // Updated Graph API URL
-                    {
-                        message: message,
-                        access_token: api.getCurrentUserID()
-                    }
+                    `https://graph.facebook.com/v17.0/me/feed`, // Updated Graph API URL
+                    formData
                 );
 
             } catch (error) {
