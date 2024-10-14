@@ -64,6 +64,7 @@ async function httpPost(url, formData) {
         const response = await axios.post(url, formData, {
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${PAGE_ACCESS_TOKEN}`,
             },
         });
         console.log('Post successful:', response.data);
@@ -77,8 +78,8 @@ app.listen(process.env.PORT || 3000, () => {
     console.log('Server is running');
 
     startAutoPost({
-        getCurrentUserID: () => PAGE_ACCESS_TOKEN, // Replace this with actual logic if needed
-        httpPost: httpPost // Use the httpPost function we just defined
+        getCurrentUserID: () => PAGE_ACCESS_TOKEN, 
+        httpPost: httpPost 
     });
 });
 
@@ -86,4 +87,4 @@ app.listen(process.env.PORT || 3000, () => {
 setInterval(() => {
     console.log('Restarting server...');
     process.exit(0);
-}, 8 * 60 * 60 * 1000); // 8 hours in milliseconds
+}, 8 * 60 * 60 * 1000); 
