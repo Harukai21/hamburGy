@@ -10,12 +10,26 @@ function getRandomInterval() {
     return randomHour * 60 * 60 * 1000; // Convert hours to milliseconds
 }
 
+function getRandomApi() {
+    // Randomly choose between the two APIs
+    const apis = [
+        "https://api.popcat.xyz/pickuplines", 
+        "https://api.popcat.xyz/fact"
+    ];
+    return apis[Math.floor(Math.random() * apis.length)];
+}
+
 async function postPickupLine(api) {
     try {
-        const response = await axios.get("https://api.popcat.xyz/pickuplines");
-        const pickupLine = response.data.pickupline;
+        const chosenApi = getRandomApi(); // Randomly pick the API
+        const response = await axios.get(chosenApi);
 
-        const message = `“${pickupLine}”`;
+        let message;
+        if (chosenApi.includes("pickuplines")) {
+            message = `“${response.data.pickupline}”`;
+        } else {
+            message = `“Fact: ${response.data.fact}”`;
+        }
 
         const formData = {
             message: message,
