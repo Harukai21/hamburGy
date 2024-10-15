@@ -48,6 +48,16 @@ module.exports = {
           const videoData = videoInfo.data;
           const videoDownloadUrl = videoData.video;
 
+          // Check the size of the video before sending
+          const response = await axios.head(videoDownloadUrl);
+          const contentLength = response.headers['content-length'];
+          const fileSizeInMB = contentLength / (1024 * 1024);
+
+          if (fileSizeInMB > 25) {
+            console.error(`File exceeds 25MB limit: ${video.title} is ${fileSizeInMB.toFixed(2)}MB.`);
+            return sendMessage(senderId, { text: "The video exceeds the 25MB limit." }, pageAccessToken);
+          }
+
           console.log(`Download successful: ${video.title}`);
           
           // Send the video file using the video URL directly
