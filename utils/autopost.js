@@ -18,7 +18,7 @@ module.exports.startAutoPost = function(api) {
                 };
 
                 await api.httpPost(
-                    `https://graph.facebook.com/v17.0/me/feed`, // Updated Graph API URL
+                    `https://graph.facebook.com/v17.0/303798532824975/feed`, // Updated Graph API URL
                     formData
                 );
 
