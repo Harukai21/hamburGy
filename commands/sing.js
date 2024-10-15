@@ -54,7 +54,7 @@ module.exports = {
               type: 'audio',
               payload: {
                 url: videoDownloadUrl,
-                is_reusable: true
+                is_reusable: false
               }
             }
           }, pageAccessToken);
