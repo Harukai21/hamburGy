@@ -39,7 +39,7 @@ module.exports = {
               type: 'image',
               payload: {
                 url: response.image,   // URL provided from the response
-                is_reusable: true      // Mark as reusable, if necessary
+                is_reusable: false      // Mark as reusable, if necessary
               }
             }
           }, pageAccessToken)
