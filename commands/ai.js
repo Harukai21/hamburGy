@@ -118,8 +118,16 @@ async function getGlobalsprakResponse(userHistory) {
 // Function to get a response from the Groq API as fallback
 async function getGroqResponse(userHistory) {
   try {
+    // Validate and sanitize userHistory to ensure content is always a string
+    const sanitizedHistory = userHistory.map(entry => {
+      return {
+        role: entry.role,
+        content: typeof entry.content === 'string' ? entry.content : JSON.stringify(entry.content)
+      };
+    });
+
     const chatCompletion = await groq.chat.completions.create({
-      messages: userHistory,
+      messages: sanitizedHistory,
       model: 'llama3-8b-8192',
       temperature: 1,
       max_tokens: 1024,
@@ -138,6 +146,7 @@ async function getGroqResponse(userHistory) {
     return null;
   }
 }
+
 
 // Function to send the message in two chunks if necessary
 function sendTwoChunksIfNecessary(senderId, message, pageAccessToken, sendMessage) {
