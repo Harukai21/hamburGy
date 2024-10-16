@@ -4,10 +4,9 @@ const axios = require('axios');
 let isCronStarted = false;
 
 // Philippines time is UTC+8
-const postTime = '0 12 * * *'; // 12 PM everyday
+const postTime = '0 12 * * *'; // 12 PM every day
 
 function getRandomApi() {
-    // Randomly choose between the two APIs
     const apis = [
         "https://api.popcat.xyz/pickuplines", 
         "https://api.popcat.xyz/fact"
@@ -17,7 +16,7 @@ function getRandomApi() {
 
 async function postPickupLine(api) {
     try {
-        const chosenApi = getRandomApi(); // Randomly pick the API
+        const chosenApi = getRandomApi();
         const response = await axios.get(chosenApi);
 
         let message;
@@ -33,7 +32,7 @@ async function postPickupLine(api) {
         };
 
         await api.httpPost(
-            `https://graph.facebook.com/v17.0/303798532824975/feed`, // Updated Graph API URL
+            `https://graph.facebook.com/v17.0/303798532824975/feed`,
             formData
         );
 
@@ -47,12 +46,11 @@ module.exports.startAutoPost = function(api) {
     if (!isCronStarted) {
         console.log("Starting the cron job...");
 
-        // Schedule the task to run at 12 PM every day Philippines time (UTC+8)
         cron.schedule(postTime, () => {
             console.log("Running daily post at 12 PM (Philippines time)...");
             postPickupLine(api);
         }, {
-            timezone: "Asia/Manila" // Ensuring it runs in Philippines time
+            timezone: "Asia/Manila"
         });
 
         isCronStarted = true;
