@@ -3,12 +3,8 @@ const axios = require('axios');
 
 let isCronStarted = false;
 
-function getRandomInterval() {
-    // Choose a random interval between 2, 3, 4, or 5 hours
-    const hours = [2, 3, 4, 5];
-    const randomHour = hours[Math.floor(Math.random() * hours.length)];
-    return randomHour * 60 * 60 * 1000; // Convert hours to milliseconds
-}
+// Philippines time is UTC+8
+const postTime = '0 12 * * *'; // 12 PM everyday
 
 function getRandomApi() {
     // Randomly choose between the two APIs
@@ -45,18 +41,20 @@ async function postPickupLine(api) {
     } catch (error) {
         console.error("Error during auto-posting:", error);
     }
-
-    // Schedule the next post after a random interval
-    const randomInterval = getRandomInterval();
-    console.log(`Next post scheduled in ${randomInterval / (60 * 60 * 1000)} hours`);
-    setTimeout(() => postPickupLine(api), randomInterval); // Re-schedule after the random interval
 }
 
 module.exports.startAutoPost = function(api) {
     if (!isCronStarted) {
-        // Start the initial post
-        console.log("Starting the auto-post process...");
-        postPickupLine(api);
+        console.log("Starting the cron job...");
+
+        // Schedule the task to run at 12 PM every day Philippines time (UTC+8)
+        cron.schedule(postTime, () => {
+            console.log("Running daily post at 12 PM (Philippines time)...");
+            postPickupLine(api);
+        }, {
+            timezone: "Asia/Manila" // Ensuring it runs in Philippines time
+        });
+
         isCronStarted = true;
     }
 };
