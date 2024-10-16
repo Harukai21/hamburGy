@@ -60,16 +60,12 @@ module.exports = {
     } catch (error) {
       // Log the actual error
       console.error("Error in AI Execution:", error);
-      sendMessage(senderId, {
-        text: "Clear history to avoid error",
-        quick_replies: [
-          {
-            content_type: "text",
-            title: "Clear History",
-            payload: "CLEAR_HISTORY",
-          }
-        ]
-      }, pageAccessToken);
+
+      // Automatically clear the user's message history on error
+      clearHistory(senderId);
+
+      // Notify the user that the history has been cleared to avoid further issues
+      sendMessage(senderId, { text: "History cleared to avoid error. Please try again." }, pageAccessToken);
     }
   }
 };
@@ -181,7 +177,7 @@ async function GenerateGeminiAnswer(history, files) {
   }
 }
 
-// Handle clearing message history
-module.exports.clearHistory = (senderId) => {
+// Automatically clear the user's message history
+function clearHistory(senderId) {
   messageHistory.delete(senderId);
-};
+}
