@@ -8,7 +8,7 @@ const youtube = new Client();
 
 module.exports = {
   name: "video",
-  description: "Downloads video from YouTube",
+  description: "Downloads video (25mb below) from YouTube",
   usage: '/video <videoTitle>',
   author: "Biru",
 
