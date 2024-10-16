@@ -13,7 +13,6 @@ app.use(bodyParser.json());
 const VERIFY_TOKEN = 'pagebot';
 const PAGE_ACCESS_TOKEN = fs.readFileSync('token.txt', 'utf8').trim();
 
-// Handle root route
 app.get('/', (req, res) => {
     res.send('Welcome to the Webhook Server');
 });
@@ -73,18 +72,19 @@ async function httpPost(url, formData) {
     }
 }
 
-// Start auto-posting when server starts
+// Start server but do not immediately auto-post
 app.listen(process.env.PORT || 3000, () => {
     console.log('Server is running');
 
+    // Start the auto-posting process (runs based on cron schedule, not on start)
     startAutoPost({
         getCurrentUserID: () => PAGE_ACCESS_TOKEN, 
         httpPost: httpPost 
     });
 });
 
-// Restart server every 8 hours
+// Optionally restart the server every 8 hours without triggering auto-post
 setInterval(() => {
     console.log('Restarting server...');
     process.exit(0);
-}, 8 * 60 * 60 * 1000); 
+}, 8 * 60 * 60 * 1000);
