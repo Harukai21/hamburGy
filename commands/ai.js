@@ -60,7 +60,16 @@ module.exports = {
     } catch (error) {
       // Log the actual error
       console.error("Error in AI Execution:", error);
-      sendMessage(senderId, { text: "I'm busy right now, please try again later." }, pageAccessToken);
+      sendMessage(senderId, {
+        text: "Clear history to avoid error",
+        quick_replies: [
+          {
+            content_type: "text",
+            title: "Clear History",
+            payload: "CLEAR_HISTORY",
+          }
+        ]
+      }, pageAccessToken);
     }
   }
 };
@@ -171,3 +180,8 @@ async function GenerateGeminiAnswer(history, files) {
     return null;
   }
 }
+
+// Handle clearing message history
+module.exports.clearHistory = (senderId) => {
+  messageHistory.delete(senderId);
+};
