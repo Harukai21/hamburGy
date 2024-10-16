@@ -3,7 +3,7 @@ const axios = require('axios');
 module.exports = {
   name: "tiktok",
   description: "Downloads video from TikTok",
-  usage: '/tiktok <videoTitle>',
+  usage: '/tiktok <title>',
   author: "Biru",
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
