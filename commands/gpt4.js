@@ -3,12 +3,15 @@ module.exports = {
   name: 'gpt4',
   description: 'Ask a question to GPT-4',
   author: 'Biru',
+  usage: '/gpt4 <question>',
   async execute(senderId, args, pageAccessToken, sendMessage) {
-    const prompt = args.join( );
+    const prompt = args.join(' ');
     try {
-      const apiUrl = `https://vneerapi.onrender.com/ai?prompt=${encodeURIComponent(prompt)}&uid=100${senderId}`;
+      const apiUrl = `https://vneerapi.onrender.com/ai?prompt=${encodeURIComponent(prompt)}&uid=${senderId}`;
       const response = await axios.get(apiUrl);
-      const text = response.data.gpt4;
+
+      // Use the correct property from the API response
+      const text = response.data.message || 'No response from GPT-4';
 
       // Split the response into chunks if it exceeds 2000 characters
       const maxMessageLength = 2000;
@@ -22,7 +25,7 @@ module.exports = {
       }
     } catch (error) {
       console.error('Error calling GPT-4 API:', error);
-      sendMessage(senderId, { text: 'Please Enter Your Valid Question?.' }, pageAccessToken);
+      sendMessage(senderId, { text: 'Please enter a valid question.' }, pageAccessToken);
     }
   }
 };
