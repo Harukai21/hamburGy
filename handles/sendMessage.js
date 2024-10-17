@@ -16,8 +16,9 @@ function sendAction(senderId, pageAccessToken, action) {
       console.error(`Error sending ${action}:`, error);
     } else if (response.body.error) {
       console.error('Error response:', response.body.error);
+      console.log('Full response:', response); // Log the entire response for more details
     } else {
-      console.log(`${action} action sent successfully`);
+      console.log(`${action} action sent successfully. Response body:`, body);
     }
   });
 }
@@ -45,6 +46,8 @@ function sendMessage(senderId, message, pageAccessToken) {
     payload.message.quick_replies = message.quick_replies;
   }
 
+  console.log('Sending message payload:', payload); // Log the message payload
+
   // 1. Mark the message as "seen" immediately
   sendAction(senderId, pageAccessToken, 'mark_seen');
 
@@ -63,14 +66,15 @@ function sendMessage(senderId, message, pageAccessToken) {
         console.error('Error sending message:', error);
       } else if (response.body.error) {
         console.error('Error response:', response.body.error);
+        console.log('Full response:', response); // Log the entire response for more details
       } else {
-        console.log('Message sent successfully:', body);
+        console.log('Message sent successfully. Response body:', body);
       }
 
       // 4. Turn off typing indicator after sending the message
       sendAction(senderId, pageAccessToken, 'typing_off');
     });
-  }, 0000); // 2-second delay to simulate typing
+  }, 0000); // Adjust delay as needed
 }
 
 module.exports = { sendMessage };
