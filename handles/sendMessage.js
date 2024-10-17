@@ -7,7 +7,7 @@ function sendAction(senderId, pageAccessToken, action) {
   };
 
   request({
-    url: 'https://graph.facebook.com/v13.0/me/messages',
+    url: 'https://graph.facebook.com/v20.0/me/messages',
     qs: { access_token: pageAccessToken },
     method: 'POST',
     json: payload,
@@ -59,7 +59,7 @@ function sendMessage(senderId, message, pageAccessToken) {
   // 3. Delay sending the actual message to simulate typing
   setTimeout(() => {
     request({
-      url: 'https://graph.facebook.com/v13.0/me/messages',
+      url: 'https://graph.facebook.com/v20.0/me/messages',
       qs: { access_token: pageAccessToken },
       method: 'POST',
       json: payload,
