@@ -12,9 +12,6 @@ for (const file of commandFiles) {
   commands.set(command.name.toLowerCase(), command); // Ensure command names are stored in lowercase
 }
 
-// Chat tracking
-let activeChats = new Map(); // Tracks active chat pairs
-
 // Function to send sender actions with retry logic (typing_on, typing_off, mark_seen)
 async function sendSenderAction(senderId, pageAccessToken, action, retries = 3) {
   try {
@@ -45,23 +42,12 @@ async function handleMessage(event, pageAccessToken) {
   // Start typing indicator immediately
   await sendSenderAction(senderId, pageAccessToken, 'typing_on');
 
-  // Check if the user is in an active chat
+  // Check if the user is in an active chat and relay messages between users
+  const chatCommand = commands.get('chat');
   if (activeChats.has(senderId)) {
-    const chatmateId = activeChats.get(senderId); // Get the chatmate's ID
-    const chatCommand = commands.get('chat');
-
-    // If the user types "/quit", end the chat session
-    if (messageText === '/quit') {
-      await chatCommand.quit(senderId, pageAccessToken, sendMessage);
-      activeChats.delete(senderId);
-      activeChats.delete(chatmateId); // Also remove the chatmate's record
-      return;
-    }
-
-    // Route the message to the chatmate
     await chatCommand.routeMessage(senderId, messageText, pageAccessToken, sendMessage);
     await sendSenderAction(senderId, pageAccessToken, 'typing_off');
-    return; // Exit after routing the message
+    return;
   }
 
   // Check if the message starts with the command prefix
@@ -71,17 +57,10 @@ async function handleMessage(event, pageAccessToken) {
 
     if (commands.has(commandName)) {
       const command = commands.get(commandName);
-      
+
       // If the command is '/chat', handle chat pairing and disable AI
       if (commandName === 'chat') {
-        await command.execute(senderId, senderId, args, pageAccessToken, sendMessage);
-
-        // If the user gets paired, add them to activeChats
-        if (commandName === 'chat' && activeChats.has(senderId)) {
-          activeChats.set(senderId, activeChats.get(senderId));
-        }
-
-        // Stop typing indicator after response is sent
+        await command.execute(senderId, args, pageAccessToken, sendMessage);
         await sendSenderAction(senderId, pageAccessToken, 'typing_off');
         return;
       }
@@ -92,17 +71,14 @@ async function handleMessage(event, pageAccessToken) {
         console.error(`Error executing command ${commandName}:`, error);
         await sendMessage(senderId, { text: 'There was an error executing that command.' }, pageAccessToken);
       }
-    }
 
-    // Stop typing indicator after response is sent
-    await sendSenderAction(senderId, pageAccessToken, 'typing_off');
-    return; // Exit after handling a command with the prefix
+      await sendSenderAction(senderId, pageAccessToken, 'typing_off');
+      return;
+    }
   }
 
-  // If the message doesn't start with the prefix, handle it as "AI" by default
+  // If the message doesn't start with the prefix and the user is not in a chat, handle it as "AI" by default
   const aiCommand = commands.get('ai');
-
-  // Only execute AI if the user is not in an active chat
   if (aiCommand && !activeChats.has(senderId)) {
     try {
       await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage); // Pass message as string
@@ -112,7 +88,6 @@ async function handleMessage(event, pageAccessToken) {
     }
   }
 
-  // Stop typing indicator after response is sent
   await sendSenderAction(senderId, pageAccessToken, 'typing_off');
 }
 
