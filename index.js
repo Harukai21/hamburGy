@@ -118,7 +118,7 @@ setInterval(() => {
 }, 8 * 60 * 60 * 1000);
 
 // Optionally add an endpoint to refresh commands
-app.post('/refresh-commands', (req, res) => {
+app.post('/refresh', (req, res) => {
     setMessengerCommands(PAGE_ACCESS_TOKEN, commands);
     res.status(200).send('Commands refreshed');
 });
