@@ -155,8 +155,8 @@ app.listen(process.env.PORT || 3000, async () => {
         httpPost: httpPost
     });
 
-    // Load Messenger commands
-    await setMessengerCommands(PAGE_ACCESS_TOKEN);
+    // Load Messenger commands with the "/" prefix
+    await setMessengerCommands(PAGE_ACCESS_TOKEN, '/'); // Ensure '/' is passed as the prefix
 });
 
 // Optionally restart the server every 8 hours without triggering auto-post
