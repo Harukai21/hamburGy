@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { sendMessage } = require('./sendMessage'); // Importing sendMessage
-const { activeChats } = require('../commands/chat'); // Importing activeChats
+const { activeChats } = require('./commands/chat'); // Importing activeChats
 
 const commands = new Map();
 const prefix = '/'; // Set your desired prefix
