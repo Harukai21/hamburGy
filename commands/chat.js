@@ -61,5 +61,9 @@ module.exports = {
 
     const chatmateId = activeChats.get(senderId);
     await sendMessage(chatmateId, { text: message }, pageAccessToken);
-  }
+  },
+
+  // Export the activeChats and chatQueue for external access
+  activeChats,
+  chatQueue
 };
