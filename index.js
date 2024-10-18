@@ -20,7 +20,7 @@ const commands = commandFiles.map(file => {
     const command = require(`./commands/${file}`);
     return {
         name: command.name,
-        info: command.info || 'No description available'
+        description: command.description || 'No description available'
     };
 });
 
