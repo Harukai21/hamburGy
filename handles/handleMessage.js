@@ -43,10 +43,17 @@ async function handleMessage(event, pageAccessToken) {
   // Start typing indicator immediately
   await sendSenderAction(senderId, pageAccessToken, 'typing_on');
 
-  // Check if the user is in an active chat and relay messages between users
+  // Check if the user is in an active chat and handle "/quit" command
   const chatCommand = commands.get('chat');
   if (activeChats.has(senderId)) {
-    await chatCommand.routeMessage(senderId, messageText, pageAccessToken, sendMessage);
+    if (messageText.toLowerCase() === '/quit') {
+      // Handle the /quit command and terminate the chat
+      await chatCommand.quit(senderId, pageAccessToken, sendMessage);
+    } else {
+      // Relay the message to the chatmate
+      await chatCommand.routeMessage(senderId, messageText, pageAccessToken, sendMessage);
+    }
+    
     await sendSenderAction(senderId, pageAccessToken, 'typing_off');
     return;
   }
