@@ -66,8 +66,6 @@ async function setMessengerCommands(pageAccessToken, prefix = '/') {
     const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
     
     let commandsPayload = [];
-    let commands = [];
-    let descriptions = [];
     
     // Read command files dynamically
     commandFiles.forEach(file => {
@@ -75,15 +73,13 @@ async function setMessengerCommands(pageAccessToken, prefix = '/') {
         const commandName = readCommand.name || (file.replace(".js", "")).toLowerCase();
         const description = readCommand.description || "No description provided.";
 
-        commands.push(commandName);
-        descriptions.push(description);
-
+        // Ensure only commands with the prefix are added
         commandsPayload.push({
-            name: `${prefix + commandName}`,  // Prefix each command if needed
+            name: `${prefix + commandName}`,  // Prefix each command
             description
         });
 
-        console.log(`${commandName} Loaded`);
+        console.log(`/${commandName} Loaded`);
     });
 
     console.log("Wait...");
@@ -103,6 +99,18 @@ async function setMessengerCommands(pageAccessToken, prefix = '/') {
         }
     } catch (error) {
         console.error('Error fetching commands:', error.response ? error.response.data : error.message);
+    }
+
+    // Clear old commands before updating (to avoid duplicates)
+    try {
+        await axios.delete(`https://graph.facebook.com/v21.0/me/messenger_profile?access_token=${pageAccessToken}`, {
+            data: {
+                fields: ["commands"]
+            }
+        });
+        console.log("Old commands cleared.");
+    } catch (error) {
+        console.error('Error clearing commands:', error.response ? error.response.data : error.message);
     }
 
     // If commands have changed, update the commands
@@ -167,6 +175,6 @@ setInterval(() => {
 
 // Optional refresh endpoint for reloading commands manually
 app.post('/refresh', async (req, res) => {
-    await setMessengerCommands(PAGE_ACCESS_TOKEN);
+    await setMessengerCommands(PAGE_ACCESS_TOKEN, '/'); // Ensure '/' is passed as the prefix
     res.status(200).send('Commands refreshed');
 });
