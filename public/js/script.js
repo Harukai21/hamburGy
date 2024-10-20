@@ -11,6 +11,6 @@ function toggleDarkMode() {
 }
 
 function redirectToFacebook() {
-  window.location.href = 'https://www.facebook.com/BiruAren'; // Replace with your Facebook link
+  window.location.href = 'https://www.facebook.com/valneer.2024'; // Replace with your Facebook link
 }
 
