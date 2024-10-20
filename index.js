@@ -61,75 +61,39 @@ app.post('/webhook', (req, res) => {
     }
 });
 
-// Function to clear Messenger commands dynamically
-async function clearMessengerCommands(pageAccessToken) {
-    try {
-        const response = await axios.delete(`https://graph.facebook.com/v21.0/me/messenger_profile`, {
-            data: {
-                fields: ["commands"]
-            },
-            headers: {
-                "Content-Type": "application/json"
-            },
-            params: {
-                access_token: pageAccessToken
-            }
-        });
-        if (response.data.result === "success") {
-            console.log("Commands cleared!");
-        } else {
-            console.log("Failed to clear commands");
-        }
-    } catch (error) {
-        console.error('Error clearing commands:', error.response ? error.response.data : error.message);
-    }
-}
-
-// Function to set Messenger commands dynamically
+// Function to set Messenger commands dynamically and delete old commands
 async function setMessengerCommands(pageAccessToken, prefix = '/') {
     const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
-    
+
     let commandsPayload = [];
-    let commands = [];
-    let descriptions = [];
     
-    // Read command files dynamically
+    // Read command files dynamically and prefix each command
     commandFiles.forEach(file => {
         const readCommand = require(`./commands/${file}`);
         const commandName = readCommand.name || (file.replace(".js", "")).toLowerCase();
         const description = readCommand.description || "No description provided.";
 
-        commands.push(commandName);
-        descriptions.push(description);
-
         commandsPayload.push({
-            name: `${prefix + commandName}`,  // Prefix each command if needed
+            name: `${prefix + commandName}`,  // Prefix each command with "/"
             description
         });
 
-        console.log(`${commandName} Loaded`);
+        console.log(`/${commandName} Loaded`);
     });
 
-    console.log("Wait...");
-
-    // Fetch current commands from Facebook Messenger Profile API
+    // Delete old commands to avoid duplication
     try {
-        const dataCmd = await axios.get(`https://graph.facebook.com/v21.0/me/messenger_profile`, {
-            params: {
-                fields: "commands",
-                access_token: pageAccessToken
+        await axios.delete(`https://graph.facebook.com/v21.0/me/messenger_profile?access_token=${pageAccessToken}`, {
+            data: {
+                fields: ["commands"]
             }
         });
-
-        // Check if commands are unchanged
-        if (dataCmd.data.data && dataCmd.data.data[0].commands[0].commands.length === commandsPayload.length) {
-            return console.log("Commands not changed");
-        }
+        console.log("Old commands cleared.");
     } catch (error) {
-        console.error('Error fetching commands:', error.response ? error.response.data : error.message);
+        console.error('Error clearing old commands:', error.response ? error.response.data : error.message);
     }
 
-    // If commands have changed, update the commands
+    // Update Messenger commands
     try {
         const loadCmd = await axios.post(`https://graph.facebook.com/v21.0/me/messenger_profile?access_token=${pageAccessToken}`, {
             commands: [
@@ -145,7 +109,7 @@ async function setMessengerCommands(pageAccessToken, prefix = '/') {
         });
 
         if (loadCmd.data.result === "success") {
-            console.log("Commands loaded!");
+            console.log("Commands loaded successfully!");
         } else {
             console.log("Failed to load commands");
         }
@@ -176,11 +140,8 @@ app.listen(process.env.PORT || 3000, async () => {
     // Start the auto-posting process
     startAutoPost({
         getCurrentUserID: () => PAGE_ACCESS_TOKEN,
-        httpPost: httpPost // Ensure httpPost is defined and passed here
+        httpPost: httpPost
     });
-
-    // Clear old Messenger commands first
-    await clearMessengerCommands(PAGE_ACCESS_TOKEN);
 
     // Load Messenger commands with the "/" prefix
     await setMessengerCommands(PAGE_ACCESS_TOKEN, '/'); // Ensure '/' is passed as the prefix
@@ -194,6 +155,6 @@ setInterval(() => {
 
 // Optional refresh endpoint for reloading commands manually
 app.post('/refresh', async (req, res) => {
-    await setMessengerCommands(PAGE_ACCESS_TOKEN);
+    await setMessengerCommands(PAGE_ACCESS_TOKEN, '/'); // Reload commands with '/'
     res.status(200).send('Commands refreshed');
 });
