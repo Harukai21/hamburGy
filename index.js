@@ -11,12 +11,15 @@ const axios = require('axios');
 const app = express();
 app.use(bodyParser.json());
 
+// Serve static files like HTML, CSS, images, and JavaScript
+app.use(express.static(path.join(__dirname, 'public')));
+
 const VERIFY_TOKEN = 'pagebot';
 const PAGE_ACCESS_TOKEN = fs.readFileSync('token.txt', 'utf8').trim();
 
-// Root endpoint for basic server check
+// Root endpoint to serve the HTML portfolio
 app.get('/', (req, res) => {
-    res.send('Welcome to the Webhook Server');
+    res.sendFile(path.join(__dirname, 'public', 'user.html'));  // Assuming 'user.html' is in the 'public' folder
 });
 
 // Webhook verification
@@ -66,7 +69,7 @@ async function setMessengerCommands(pageAccessToken, prefix = '/') {
     const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
 
     let commandsPayload = [];
-    
+
     // Read command files dynamically and prefix each command
     commandFiles.forEach(file => {
         const readCommand = require(`./commands/${file}`);
