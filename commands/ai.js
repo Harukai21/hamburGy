@@ -24,7 +24,7 @@ module.exports = {
       // Initialize user history if not present
       let userHistory = messageHistory.get(senderId) || [];
       if (userHistory.length === 0) {
-        userHistory.push({ role: 'system', content: 'You are a helpful and kind assistant that answers everything.' });
+        userHistory.push({ role: 'system', content: 'You are an assistant that answers everything.' });
       }
 
       let responseMessage = '';
@@ -128,7 +128,7 @@ async function getGroqResponse(userHistory) {
 
     const chatCompletion = await groq.chat.completions.create({
       messages: sanitizedHistory,
-      model: 'llama3-8b-8192',
+      model: 'llama-3.2-90b-vision-preview',
       temperature: 1,
       max_tokens: 1024,
       top_p: 1,
