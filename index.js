@@ -14,15 +14,72 @@ app.use(bodyParser.json());
 const VERIFY_TOKEN = 'pagebot';
 const PAGE_ACCESS_TOKEN = fs.readFileSync('token.txt', 'utf8').trim();
 
-// Function to clear Messenger commands
+// Root endpoint for basic server check
+app.get('/', (req, res) => {
+    res.send('Welcome to the Webhook Server');
+});
+
+// Webhook verification
+app.get('/webhook', (req, res) => {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode && token) {
+        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+            console.log('WEBHOOK_VERIFIED');
+            res.status(200).send(challenge);
+        } else {
+            res.sendStatus(403);
+        }
+    }
+});
+
+// Webhook to handle incoming messages
+app.post('/webhook', (req, res) => {
+    const body = req.body;
+
+    if (body.object === 'page') {
+        body.entry.forEach(entry => {
+            entry.messaging.forEach(event => {
+                if (event.message) {
+                    if (event.message.text) {
+                        handleMessage(event, PAGE_ACCESS_TOKEN);
+                    }
+                    if (event.message.attachments) {
+                        handleAttachment(event, PAGE_ACCESS_TOKEN);
+                    }
+                } else if (event.postback) {
+                    handlePostback(event, PAGE_ACCESS_TOKEN);
+                }
+            });
+        });
+
+        res.status(200).send('EVENT_RECEIVED');
+    } else {
+        res.sendStatus(404);
+    }
+});
+
+// Function to clear Messenger commands dynamically
 async function clearMessengerCommands(pageAccessToken) {
     try {
-        await axios.delete(`https://graph.facebook.com/v21.0/me/messenger_profile?access_token=${pageAccessToken}`, {
+        const response = await axios.delete(`https://graph.facebook.com/v21.0/me/messenger_profile`, {
             data: {
-                fields: ["commands"]  // Add other fields if needed
+                fields: ["commands"]
+            },
+            headers: {
+                "Content-Type": "application/json"
+            },
+            params: {
+                access_token: pageAccessToken
             }
         });
-        console.log("Old commands cleared successfully.");
+        if (response.data.result === "success") {
+            console.log("Commands cleared!");
+        } else {
+            console.log("Failed to clear commands");
+        }
     } catch (error) {
         console.error('Error clearing commands:', error.response ? error.response.data : error.message);
     }
@@ -33,6 +90,8 @@ async function setMessengerCommands(pageAccessToken, prefix = '/') {
     const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
     
     let commandsPayload = [];
+    let commands = [];
+    let descriptions = [];
     
     // Read command files dynamically
     commandFiles.forEach(file => {
@@ -40,13 +99,15 @@ async function setMessengerCommands(pageAccessToken, prefix = '/') {
         const commandName = readCommand.name || (file.replace(".js", "")).toLowerCase();
         const description = readCommand.description || "No description provided.";
 
-        // Ensure only commands with the prefix are added
+        commands.push(commandName);
+        descriptions.push(description);
+
         commandsPayload.push({
-            name: `${prefix + commandName}`,  // Prefix each command
+            name: `${prefix + commandName}`,  // Prefix each command if needed
             description
         });
 
-        console.log(`/${commandName} Loaded`);
+        console.log(`${commandName} Loaded`);
     });
 
     console.log("Wait...");
@@ -93,6 +154,21 @@ async function setMessengerCommands(pageAccessToken, prefix = '/') {
     }
 }
 
+// Implement httpPost function for autoposting
+async function httpPost(url, formData) {
+    try {
+        const response = await axios.post(url, formData, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${PAGE_ACCESS_TOKEN}`,
+            },
+        });
+        console.log('Post successful:', response.data);
+    } catch (error) {
+        console.error('Error in httpPost:', error.response ? error.response.data : error.message);
+    }
+}
+
 // Start server but do not immediately auto-post
 app.listen(process.env.PORT || 3000, async () => {
     console.log('Server is running');
@@ -100,7 +176,7 @@ app.listen(process.env.PORT || 3000, async () => {
     // Start the auto-posting process
     startAutoPost({
         getCurrentUserID: () => PAGE_ACCESS_TOKEN,
-        httpPost: httpPost
+        httpPost: httpPost // Ensure httpPost is defined and passed here
     });
 
     // Clear old Messenger commands first
@@ -110,15 +186,14 @@ app.listen(process.env.PORT || 3000, async () => {
     await setMessengerCommands(PAGE_ACCESS_TOKEN, '/'); // Ensure '/' is passed as the prefix
 });
 
+// Optionally restart the server every 8 hours without triggering auto-post
+setInterval(() => {
+    console.log('Restarting server...');
+    process.exit(0);
+}, 8 * 60 * 60 * 1000);
+
 // Optional refresh endpoint for reloading commands manually
 app.post('/refresh', async (req, res) => {
-    await clearMessengerCommands(PAGE_ACCESS_TOKEN);  // Clear first
-    await setMessengerCommands(PAGE_ACCESS_TOKEN, '/'); // Reload
+    await setMessengerCommands(PAGE_ACCESS_TOKEN);
     res.status(200).send('Commands refreshed');
-});
-
-// Optional clear endpoint for manually clearing commands
-app.post('/clear', async (req, res) => {
-    await clearMessengerCommands(PAGE_ACCESS_TOKEN); // Clear commands
-    res.status(200).send('Commands cleared');
 });
