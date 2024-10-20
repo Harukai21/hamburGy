@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billy's Profile</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="profile-header">
+            <!-- Updated profile picture path to assets directory -->
+            <img src="assets/profile.jpg" alt="Profile Picture" class="profile-picture">
+            <h1>Valneer<span class="verified">✔</span></h1>
+            <p>@Val2.0</p>
+            <p class="quote">I'm optimistic pride.</p>
+        </div>
+
+        <div class="profile-details">
+            <p>2003</p>
+            <p>20M</p>
+            <p>Quezon</p>
+        </div>
+
+        <div class="social-buttons">
+            <button onclick="redirectToFacebook()">Facebook</button>
+        </div>
+
+        <footer>
+            <p class="blinking">© 2024 | by Valneer</p>
+        </footer>
+
+        <!-- Music player -->
+        <audio controls autoplay loop>
+            <source src="assets/my-music.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+
+        <!-- Dark mode toggle -->
+        <button class="dark-mode-toggle" onclick="toggleDarkMode()">
+            <img id="mode-icon" src="assets/sun-icon.png" alt="Dark Mode Icon">
+        </button>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
