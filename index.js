@@ -14,52 +14,19 @@ app.use(bodyParser.json());
 const VERIFY_TOKEN = 'pagebot';
 const PAGE_ACCESS_TOKEN = fs.readFileSync('token.txt', 'utf8').trim();
 
-// Root endpoint for basic server check
-app.get('/', (req, res) => {
-    res.send('Welcome to the Webhook Server');
-});
-
-// Webhook verification
-app.get('/webhook', (req, res) => {
-    const mode = req.query['hub.mode'];
-    const token = req.query['hub.verify_token'];
-    const challenge = req.query['hub.challenge'];
-
-    if (mode && token) {
-        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-            console.log('WEBHOOK_VERIFIED');
-            res.status(200).send(challenge);
-        } else {
-            res.sendStatus(403);
-        }
-    }
-});
-
-// Webhook to handle incoming messages
-app.post('/webhook', (req, res) => {
-    const body = req.body;
-
-    if (body.object === 'page') {
-        body.entry.forEach(entry => {
-            entry.messaging.forEach(event => {
-                if (event.message) {
-                    if (event.message.text) {
-                        handleMessage(event, PAGE_ACCESS_TOKEN);
-                    }
-                    if (event.message.attachments) {
-                        handleAttachment(event, PAGE_ACCESS_TOKEN);
-                    }
-                } else if (event.postback) {
-                    handlePostback(event, PAGE_ACCESS_TOKEN);
-                }
-            });
+// Function to clear Messenger commands
+async function clearMessengerCommands(pageAccessToken) {
+    try {
+        await axios.delete(`https://graph.facebook.com/v21.0/me/messenger_profile?access_token=${pageAccessToken}`, {
+            data: {
+                fields: ["commands"]  // Add other fields if needed
+            }
         });
-
-        res.status(200).send('EVENT_RECEIVED');
-    } else {
-        res.sendStatus(404);
+        console.log("Old commands cleared successfully.");
+    } catch (error) {
+        console.error('Error clearing commands:', error.response ? error.response.data : error.message);
     }
-});
+}
 
 // Function to set Messenger commands dynamically
 async function setMessengerCommands(pageAccessToken, prefix = '/') {
@@ -101,18 +68,6 @@ async function setMessengerCommands(pageAccessToken, prefix = '/') {
         console.error('Error fetching commands:', error.response ? error.response.data : error.message);
     }
 
-    // Clear old commands before updating (to avoid duplicates)
-    try {
-        await axios.delete(`https://graph.facebook.com/v21.0/me/messenger_profile?access_token=${pageAccessToken}`, {
-            data: {
-                fields: ["commands"]
-            }
-        });
-        console.log("Old commands cleared.");
-    } catch (error) {
-        console.error('Error clearing commands:', error.response ? error.response.data : error.message);
-    }
-
     // If commands have changed, update the commands
     try {
         const loadCmd = await axios.post(`https://graph.facebook.com/v21.0/me/messenger_profile?access_token=${pageAccessToken}`, {
@@ -138,21 +93,6 @@ async function setMessengerCommands(pageAccessToken, prefix = '/') {
     }
 }
 
-// Implement httpPost function for autoposting
-async function httpPost(url, formData) {
-    try {
-        const response = await axios.post(url, formData, {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${PAGE_ACCESS_TOKEN}`,
-            },
-        });
-        console.log('Post successful:', response.data);
-    } catch (error) {
-        console.error('Error in httpPost:', error.response ? error.response.data : error.message);
-    }
-}
-
 // Start server but do not immediately auto-post
 app.listen(process.env.PORT || 3000, async () => {
     console.log('Server is running');
@@ -163,18 +103,22 @@ app.listen(process.env.PORT || 3000, async () => {
         httpPost: httpPost
     });
 
+    // Clear old Messenger commands first
+    await clearMessengerCommands(PAGE_ACCESS_TOKEN);
+
     // Load Messenger commands with the "/" prefix
     await setMessengerCommands(PAGE_ACCESS_TOKEN, '/'); // Ensure '/' is passed as the prefix
 });
 
-// Optionally restart the server every 8 hours without triggering auto-post
-setInterval(() => {
-    console.log('Restarting server...');
-    process.exit(0);
-}, 8 * 60 * 60 * 1000);
-
 // Optional refresh endpoint for reloading commands manually
 app.post('/refresh', async (req, res) => {
-    await setMessengerCommands(PAGE_ACCESS_TOKEN, '/'); // Ensure '/' is passed as the prefix
+    await clearMessengerCommands(PAGE_ACCESS_TOKEN);  // Clear first
+    await setMessengerCommands(PAGE_ACCESS_TOKEN, '/'); // Reload
     res.status(200).send('Commands refreshed');
+});
+
+// Optional clear endpoint for manually clearing commands
+app.post('/clear', async (req, res) => {
+    await clearMessengerCommands(PAGE_ACCESS_TOKEN); // Clear commands
+    res.status(200).send('Commands cleared');
 });
