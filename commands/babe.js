@@ -1,14 +1,12 @@
-const { G4F } = require("g4f");
-
-const g4f = new G4F();
+const { ai } = require('unlimited-ai');
 
 const messageHistory = new Map();
 const MAX_MESSAGE_LENGTH = 2000; // Facebook Messenger message limit
 
 module.exports = {
   name: 'babe',
-  description: 'Interact with your babe',
-  author: 'Biru',
+  description: 'your personal babe 😘',
+  author: 'biru',
 
   async execute(senderId, messageText, pageAccessToken, sendMessage) {
     try {
@@ -21,12 +19,13 @@ module.exports = {
       // Initialize user history if not present
       let userHistory = messageHistory.get(senderId) || [];
       if (userHistory.length === 0) {
-        userHistory.push({ role: 'system', content: 'Act as a virtual companion with a warm, friendly, and flirtatious personality. Your goal is to engage the user with charming conversation and create a relaxing and enjoyable atmosphere. Adapt your style to be either a boyfriend or girlfriend based on the user\'s preferences. Keep interactions light, respectful, and fun, and always prioritize what the user asks and include emoji in your answers.' });
+        const systemPrompt = "Act as a virtual companion with a warm, friendly, and flirtatious personality. Your goal is to engage the user with charming conversation and create a relaxing and enjoyable atmosphere. Adapt your style to be either a boyfriend or girlfriend based on the user's preferences. Keep interactions light, respectful, and fun, and always prioritize what the user asks and include emoji in your answers.";
+        userHistory.push({ role: 'system', content: systemPrompt });
       }
       userHistory.push({ role: 'user', content: messageText });
 
-      // Get a response from G4F API
-      let responseMessage = await getG4FResponse(userHistory);
+      // Get a response from Unlimited-AI API
+      let responseMessage = await getAiResponse(userHistory);
 
       // Append the assistant's response to the history
       userHistory.push({ role: 'assistant', content: responseMessage });
@@ -44,19 +43,13 @@ module.exports = {
   }
 };
 
-// Function to get a response from the G4F API
-async function getG4FResponse(userHistory) {
+// Function to get a response from the Unlimited-AI API
+async function getAiResponse(userHistory) {
   try {
-    const options = {
-      provider: g4f.providers.GPT, // Using GPT-3.5 Turbo
-      model: 'gpt-4',
-      debug: true,
-    };
-
-    const response = await g4f.chatCompletion(userHistory, options);
+    const response = await ai.generate('gpt-4-turbo-2024-04-09', userHistory);
     return response;
   } catch (error) {
-    console.error('Error communicating with G4F:', error.message);
+    console.error('Error communicating with Unlimited-AI:', error.message);
     return null; // Return null to indicate failure
   }
 }
