@@ -30,6 +30,7 @@
     "node-fetch": "^3.3.2",
     "prodia.js": "^3.0.0",
     "request": "^2.88.2",
+    "unlimited-ai": "^2.0.2",
     "uri-js": "^4.4.1",
     "winston": "^3.13.0",
     "youtubei": "^1.5.4"
