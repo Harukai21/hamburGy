@@ -14,7 +14,7 @@ module.exports = {
       const response = await axios.get(apiUrl);
 
       // Extract the message from the response
-      const text = response.data.message || 'No response from Ai';
+      const text = response.data.results || 'No response from Ai';
 
       // Limit of message per chunk is 2000 characters
       const maxMessageLength = 2000;
