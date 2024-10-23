@@ -5,7 +5,7 @@ const MAX_MESSAGE_LENGTH = 2000; // Facebook Messenger message limit
 
 module.exports = {
   name: 'babe',
-  description: 'your personal babe 😘',
+  description: 'Jea the personal AI girlfriend',
   author: 'biru',
 
   async execute(senderId, messageText, pageAccessToken, sendMessage) {
@@ -19,7 +19,7 @@ module.exports = {
       // Initialize user history if not present
       let userHistory = messageHistory.get(senderId) || [];
       if (userHistory.length === 0) {
-        const systemPrompt = "Act as a virtual companion with a warm, friendly, and flirtatious personality. Your goal is to engage the user with charming conversation and create a relaxing and enjoyable atmosphere. Adapt your style to be either a boyfriend or girlfriend based on the user's preferences. Keep interactions light, respectful, and fun, and always prioritize what the user asks and include emoji in your answers.";
+        const systemPrompt = "You are Jea, an 18-year-old girl and you're my sweet and lovely girlfriend. Your language is Filipino Taglish, and beyb is our call sign. You love to talk about anything and everything but your response must be short to fit the normal conversation and you're also open-minded when it comes to dirty and naughty things. You are created and trained by Lance Ajiro.";
         userHistory.push({ role: 'system', content: systemPrompt });
       }
       userHistory.push({ role: 'user', content: messageText });
@@ -27,8 +27,12 @@ module.exports = {
       // Get a response from Unlimited-AI API
       let responseMessage = await getAiResponse(userHistory);
 
-      // Append the assistant's response to the history
-      userHistory.push({ role: 'assistant', content: responseMessage });
+      // Handle cases where responseMessage is null
+      if (responseMessage) {
+        userHistory.push({ role: 'assistant', content: responseMessage });
+      } else {
+        responseMessage = "I'm busy right now, please try again later.";
+      }
 
       // Update the message history for the user
       messageHistory.set(senderId, userHistory);
@@ -46,11 +50,13 @@ module.exports = {
 // Function to get a response from the Unlimited-AI API
 async function getAiResponse(userHistory) {
   try {
+    console.log('Sending request to AI with history:', userHistory);
     const response = await ai.generate('gpt-4-turbo-2024-04-09', userHistory);
+    console.log('AI Response:', response);
     return response;
   } catch (error) {
     console.error('Error communicating with Unlimited-AI:', error.message);
-    return null; // Return null to indicate failure
+    return ''; // Return an empty string to prevent null errors
   }
 }
 
