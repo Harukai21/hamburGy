@@ -9,7 +9,6 @@ const gpt = require('../commands/gpt'); // Import GPT command
 const commands = new Map();
 const prefix = '/';
 
-// Load all command modules dynamically
 const commandFiles = fs.readdirSync(path.join(__dirname, '../commands')).filter(file => file.endsWith('.js'));
 for (const file of commandFiles) {
   const command = require(`../commands/${file}`);
@@ -36,7 +35,6 @@ async function handleMessage(event, pageAccessToken) {
   await sendSenderAction(senderId, pageAccessToken, 'mark_seen');
   await sendSenderAction(senderId, pageAccessToken, 'typing_on');
 
-  // Check if user is in an active chat
   const chatCommand = commands.get('chat');
   if (activeChats.has(senderId)) {
     if (messageText.toLowerCase() === '/quit') {
@@ -48,7 +46,6 @@ async function handleMessage(event, pageAccessToken) {
     return;
   }
 
-  // Check if message starts with a command prefix
   if (messageText.startsWith(prefix)) {
     const args = messageText.slice(prefix.length).split(/\s+/);
     const commandName = args.shift().toLowerCase();
@@ -61,9 +58,8 @@ async function handleMessage(event, pageAccessToken) {
     }
   }
 
-  // Route message to GPT or AI based on gptMode
   const aiCommand = commands.get('ai');
-  if (gpt.isGptMode()) {
+  if (gpt.isGptMode(senderId)) {
     await gpt.execute(senderId, [messageText], pageAccessToken, sendMessage);
   } else if (aiCommand) {
     await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
