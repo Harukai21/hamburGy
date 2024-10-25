@@ -16,7 +16,7 @@ module.exports = {
 
     const commands = commandFiles.map(file => {
       const command = require(path.join(commandsDir, file));
-      return `━━━━━━━━━━━━━━━\n\n **${command.name.toUpperCase()}**\n  ⊂⊃ Info: ${command.description}\n  ⊂⊃ Usage: ${command.usage}\n`;
+      return `━━━━━━━━━━━━━━━\n ╰┈➤${command.name.toUpperCase()}\n  ⊂⊃ Info: ${command.description}\n  ⊂⊃ Usage: ${command.usage}\n`;
     });
 
     const totalCommands = commandFiles.length;
@@ -24,7 +24,7 @@ module.exports = {
      („• ֊ •„)♡
 ┏━━━━━∪∪━━━━━━┓
 ♡     COMMANDS LIST            ♡
-┗━━━━━━━━━━━━━┛\n\n ⊂⊃ ➥Total commands: ${totalCommands}\n\n${commands.join('\n\n')}`;
+┗━━━━━━━━━━━━━┛\n\n ➥Total commands: ${totalCommands}\n\n${commands.join('\n\n')}`;
 
     sendMessage(senderId, { text: helpMessage }, pageAccessToken);
   }
