@@ -1,10 +1,10 @@
 const axios = require('axios');
 
 module.exports = {
-  name: 'ai',
+  name: 'gpt',
   description: 'Recognize images, generate images, or answer questions based on input',
   author: 'Biru',
-  usage: 'just put any message',
+  usage: '/gpt on/off/clear',
   
   async execute(senderId, args, pageAccessToken, sendMessage) {
     // Combine arguments into a single message
