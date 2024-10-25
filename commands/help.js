@@ -16,7 +16,7 @@ module.exports = {
 
     const commands = commandFiles.map(file => {
       const command = require(path.join(commandsDir, file));
-      return `📄 **${command.name}**\n  🛈 Info: ${command.description}\n  🛠️ Usage: ${command.usage}`;
+      return `╰┈➤📄${command.name}\n  🛈 Info: ${command.description}\n  🛠️ Usage: ${command.usage}`;
     });
 
     const totalCommands = commandFiles.length;
