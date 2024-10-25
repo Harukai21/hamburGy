@@ -1,19 +1,17 @@
 const axios = require('axios');
 const cron = require('node-cron');
 
-// Object to track GPT mode for each user
 const userGptModes = {};
 
 module.exports = {
   name: 'gpt',
-  description: 'Toggle GPT mode on or off, recognize images, or answer questions',
+  description: 'Turn GPT mode on or off, and clear to reset history',
   author: 'Biru',
-  usage: '/gpt on/off/clear',
+  usage: 'example: /gpt on/off/clear',
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const userMessage = args.join(' ');
 
-    // Check for on/off commands to toggle GPT mode
     if (userMessage.toLowerCase() === 'on') {
       userGptModes[senderId] = true;
       await sendMessage(senderId, { text: 'GPT mode activated.' }, pageAccessToken);
@@ -25,7 +23,6 @@ module.exports = {
     }
 
     try {
-      // Proceed with GPT processing if GPT mode is on for this user
       if (userGptModes[senderId]) {
         const urlPattern = /(https?:\/\/[^\s]+)/g;
         const foundUrls = userMessage.match(urlPattern);
@@ -42,8 +39,17 @@ module.exports = {
         let message = response.data.message || 'No response from the API';
         const generatedImageUrl = response.data.img_urls?.[0];
 
+        // Remove unwanted text
         message = message.replace(/generateImage\s*\n*/, '').replace(/!\[.*?\]\(.*?\)/g, '').trim();
-        if (message) await sendMessage(senderId, { text: message }, pageAccessToken);
+
+        // Split message into chunks and send each chunk in sequence
+        const maxMessageLength = 2000;
+        const messages = splitMessageIntoChunks(message, maxMessageLength);
+
+        for (const chunk of messages) {
+          await sendMessage(senderId, { text: chunk }, pageAccessToken);
+        }
+
         if (generatedImageUrl) {
           await sendMessage(senderId, {
             attachment: { type: 'image', payload: { url: generatedImageUrl } }
@@ -63,7 +69,20 @@ module.exports = {
   },
 };
 
-// Schedule a cron job to clear history every 8 hours
+// Function to split text into chunks
+function splitMessageIntoChunks(text, maxLength) {
+  const chunks = [];
+  let start = 0;
+
+  while (start < text.length) {
+    chunks.push(text.slice(start, start + maxLength));
+    start += maxLength;
+  }
+
+  return chunks;
+}
+
+// Schedule 5-hour interval for clearing history
 cron.schedule('0 */5 * * *', async () => {
   try {
     await axios.get('https://vneerapi.onrender.com/gpt4o?prompt=clear');
