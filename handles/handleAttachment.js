@@ -4,16 +4,17 @@ const { execute: aiExecute } = require('../commands/ai'); // Import AI handler
 const { execute: gptExecute, isGptMode } = require('../commands/gpt'); // Import GPT handler and mode check
 const { sendMessage } = require('./sendMessage'); // Import sendMessage
 
-function handleAttachment(event, PAGE_ACCESS_TOKEN) {
+async function handleAttachment(event, PAGE_ACCESS_TOKEN) {
   const senderId = event.sender.id;
   const attachments = event.message.attachments;
 
-  attachments.forEach(async (attachment) => {
+  for (const attachment of attachments) {
     switch (attachment.type) {
       case 'image':
         console.log(`Image received: ${attachment.payload.url}`);
 
-        if (isGptMode()) {
+        // Check if GPT mode is active for this user
+        if (isGptMode(senderId)) {
           // Use GPT's image recognition if GPT mode is on
           await gptExecute(
             senderId,
@@ -58,7 +59,7 @@ function handleAttachment(event, PAGE_ACCESS_TOKEN) {
       default:
         console.log(`Unknown attachment type received: ${attachment.type}`);
     }
-  });
+  }
 }
 
 module.exports = { handleAttachment };
