@@ -1,6 +1,5 @@
-// gpt.js
-
 const axios = require('axios');
+const cron = require('node-cron');
 
 // Object to track GPT mode for each user
 const userGptModes = {};
@@ -10,7 +9,7 @@ module.exports = {
   description: 'Toggle GPT mode on or off, recognize images, or answer questions',
   author: 'Biru',
   usage: '/gpt on/off/clear',
-  
+
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const userMessage = args.join(' ');
 
@@ -63,3 +62,13 @@ module.exports = {
     return userGptModes[senderId] || false; // Default to false if not set
   },
 };
+
+// Schedule a cron job to clear history every 8 hours
+cron.schedule('0 */5 * * *', async () => {
+  try {
+    await axios.get('https://vneerapi.onrender.com/gpt4o?prompt=clear');
+    console.log('History cleared successfully');
+  } catch (error) {
+    console.error('Error clearing history:', error);
+  }
+});
