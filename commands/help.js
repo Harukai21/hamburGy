@@ -20,7 +20,11 @@ module.exports = {
     });
 
     const totalCommands = commandFiles.length;
-    const helpMessage = `Here are the available commands\n\n📜 **Total commands**: ${totalCommands}\n\n${commands.join('\n\n')}`;
+    const helpMessage = `♡   ∩_∩
+     („• ֊ •„)♡
+┏━━━━━∪∪━━━━━━┓
+♡     COMMANDS LIST            ♡
+┗━━━━━━━━━━━━━┛\n\n ⊂⊃ ➥Total commands: ${totalCommands}\n\n${commands.join('\n\n')}`;
 
     sendMessage(senderId, { text: helpMessage }, pageAccessToken);
   }
