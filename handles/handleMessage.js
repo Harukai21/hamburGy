@@ -29,29 +29,12 @@ async function markSeen(senderId, pageAccessToken, retries = 3) {
   }
 }
 
-// General function for sending sender actions
-async function sendSenderAction(senderId, pageAccessToken, action, retries = 3) {
-  try {
-    await sendMessage(senderId, { sender_action: action }, pageAccessToken);
-  } catch (error) {
-    console.error(`Error sending ${action}:`, error);
-    if (retries > 0 && (error.code === 'ETIMEDOUT' || error.code === 'ENETUNREACH')) {
-      console.log(`Retrying ${action}... (${3 - retries} retries left)`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      await sendSenderAction(senderId, pageAccessToken, action, retries - 1);
-    }
-  }
-}
-
 async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
   const messageText = event.message.text.trim();
 
   // Trigger markSeen independently, so it's not dependent on other actions
   markSeen(senderId, pageAccessToken).catch(error => console.error("Failed to mark seen:", error));
-
-  // Show typing indicator
-  await sendSenderAction(senderId, pageAccessToken, 'typing_on');
 
   const chatCommand = commands.get('chat');
   if (activeChats.has(senderId)) {
@@ -60,7 +43,6 @@ async function handleMessage(event, pageAccessToken) {
     } else {
       await chatCommand.routeMessage(senderId, messageText, pageAccessToken, sendMessage);
     }
-    await sendSenderAction(senderId, pageAccessToken, 'typing_off');
     return;
   }
 
@@ -71,7 +53,6 @@ async function handleMessage(event, pageAccessToken) {
     if (commands.has(commandName)) {
       const command = commands.get(commandName);
       await command.execute(senderId, args, pageAccessToken, sendMessage);
-      await sendSenderAction(senderId, pageAccessToken, 'typing_off');
       return;
     }
   }
@@ -82,8 +63,6 @@ async function handleMessage(event, pageAccessToken) {
   } else if (aiCommand) {
     await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
   }
-
-  await sendSenderAction(senderId, pageAccessToken, 'typing_off');
 }
 
 module.exports = { handleMessage };
