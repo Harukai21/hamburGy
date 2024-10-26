@@ -1,6 +1,6 @@
 const { Client } = require("youtubei");
 const axios = require("axios");
-const fs = require("fs");
+const fs = require("fs").promises;
 const path = require("path");
 const os = require("os");
 const https = require("https");
@@ -22,10 +22,10 @@ function GetOutputYt(url) {
   const data = `url=${encodeURIComponent(url)}&ajax=1&lang=en`;
   options.headers["Content-Length"] = Buffer.byteLength(data);
 
-  function makeRequest(maxRetries = 3) {
+  async function makeRequest(maxRetries = 3) {
     let retries = 0;
 
-    function attemptRequest() {
+    async function attemptRequest() {
       return new Promise((resolve, reject) => {
         const req = https.request(options, (res) => {
           let responseData = "";
@@ -39,6 +39,7 @@ function GetOutputYt(url) {
               const $ = cheerio.load(jsonData.result);
               const downloadLink = $('a[data-ftype="mp4"][data-fquality="128"]').attr("href");
               const title = $("#video_title").text().trim();
+              if (!downloadLink || !title) throw new Error("No download link or title found.");
               resolve({ downloadLink, title });
             } catch (error) {
               reject(error);
@@ -50,7 +51,9 @@ function GetOutputYt(url) {
           if (retries < maxRetries) {
             retries++;
             console.log(`Retrying request... (${retries}/${maxRetries})`);
-            attemptRequest().then(resolve).catch(reject);
+            setTimeout(() => {
+              attemptRequest().then(resolve).catch(reject);
+            }, 1000 * retries);
           } else {
             reject(error);
           }
@@ -69,9 +72,9 @@ function GetOutputYt(url) {
 
 async function downloadVideoAudio(videoUrl, senderId, sendMessage, pageAccessToken) {
   try {
-    const tempFolder = fs.mkdtempSync(path.join(os.tmpdir(), "audio-"));
+    const tempFolder = await fs.mkdtemp(path.join(os.tmpdir(), "audio-"));
     const filePath = path.join(tempFolder, "audio.mp3");
-    const writer = fs.createWriteStream(filePath);
+    const writer = await fs.open(filePath, "w");
 
     const { downloadLink, title } = await GetOutputYt(videoUrl);
 
@@ -92,14 +95,14 @@ async function downloadVideoAudio(videoUrl, senderId, sendMessage, pageAccessTok
       },
     });
 
-    response.data.pipe(writer);
+    const stream = response.data.pipe(writer.createWriteStream());
 
     await new Promise((resolve, reject) => {
-      writer.on("finish", resolve);
-      writer.on("error", reject);
+      stream.on("finish", resolve);
+      stream.on("error", reject);
     });
 
-    const stream = fs.createReadStream(filePath);
+    const audioStream = await fs.open(filePath, "r");
     await sendMessage(senderId, {
       attachment: {
         type: "audio",
@@ -107,8 +110,8 @@ async function downloadVideoAudio(videoUrl, senderId, sendMessage, pageAccessTok
       },
     }, pageAccessToken);
 
-    fs.unlinkSync(filePath);
-    fs.rmdirSync(tempFolder);
+    await fs.unlink(filePath);
+    await fs.rmdir(tempFolder);
   } catch (error) {
     console.error("Error:", error);
     await sendMessage(senderId, { text: "An error occurred while processing your request." }, pageAccessToken);
