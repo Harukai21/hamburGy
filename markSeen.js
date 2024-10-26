@@ -1,6 +1,6 @@
 // markSeen.js
 
-const { sendMessage } = require('./sendMessage');
+const { sendMessage } = require('./handle/sendMessage');
 
 async function markSeen(senderId, pageAccessToken, retries = 3) {
   try {
