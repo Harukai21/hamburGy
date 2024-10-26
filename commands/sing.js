@@ -81,6 +81,16 @@ async function downloadVideoAudio(videoUrl, senderId, sendMessage, pageAccessTok
     const extractedHTML = extractHTMLFromJS(fullResponse);
     const links = extractDownloadLinks(extractedHTML);
 
+    // Check if the SD link is valid
+    if (!links.SD) {
+      console.error("No valid download link found for SD quality.");
+      await sendMessage(senderId, { text: "No valid download link found." }, pageAccessToken);
+      return;
+    }
+
+    // Log the extracted URL for debugging
+    console.log("Downloading from URL:", links.SD);
+
     const response = await axios.get(links.SD, { responseType: "stream" });
     response.data.pipe(writer);
 
@@ -104,6 +114,7 @@ async function downloadVideoAudio(videoUrl, senderId, sendMessage, pageAccessTok
     await sendMessage(senderId, { text: "An error occurred while processing your request." }, pageAccessToken);
   }
 }
+
 
 module.exports = {
   name: "sing",
