@@ -15,6 +15,21 @@ for (const file of commandFiles) {
   commands.set(command.name.toLowerCase(), command);
 }
 
+// Function specifically for marking a message as seen
+async function markSeen(senderId, pageAccessToken, retries = 3) {
+  try {
+    await sendMessage(senderId, { sender_action: 'mark_seen' }, pageAccessToken);
+  } catch (error) {
+    console.error(`Error marking as seen:`, error);
+    if (retries > 0 && (error.code === 'ETIMEDOUT' || error.code === 'ENETUNREACH')) {
+      console.log(`Retrying mark_seen... (${3 - retries} retries left)`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await markSeen(senderId, pageAccessToken, retries - 1);
+    }
+  }
+}
+
+// General function for sending sender actions
 async function sendSenderAction(senderId, pageAccessToken, action, retries = 3) {
   try {
     await sendMessage(senderId, { sender_action: action }, pageAccessToken);
@@ -32,9 +47,8 @@ async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
   const messageText = event.message.text.trim();
 
-  // Mark the incoming message as seen immediately without waiting for any other actions
-  sendSenderAction(senderId, pageAccessToken, 'mark_seen')
-    .catch(error => console.error("Failed to mark seen:", error));
+  // Trigger markSeen independently, so it's not dependent on other actions
+  markSeen(senderId, pageAccessToken).catch(error => console.error("Failed to mark seen:", error));
 
   // Show typing indicator
   await sendSenderAction(senderId, pageAccessToken, 'typing_on');
