@@ -3,72 +3,68 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const https = require("https");
 const cheerio = require("cheerio");
 
 const youtube = new Client();
 
-const baseUrl = "https://snapsave.app/action.php";
-const lang = "en";
-const cookie = '_ga=GA1.1.253146091.1720025059; __gads=ID=ea78c10b57674a22:T=1720025060:RT=1720028639:S=ALNI_MYTI6y_R_9g5lFYwNJKzC3FZhONsQ; __gpi=UID=00000e71bfbb1126:T=1720025060:RT=1720028639:S=ALNI_MY5B9BAg8DFTtGMSiYi7MZ9_moj6g; __eoi=ID=29d84a00bfd16bbc:T=1720025060:RT=1720028639:S=AA-Afjaq6T3JBLGedYOS1BSKtXxu; FCNEC=%5B%5B%22AKsRol9sGHON-Qjnu8g9pXDQnjOc72SXe_4cCDOldAsnL2515xdRGPNPkse479cqgd1l7W4Y91d68TOrWAh5eQNw_6ntBaoBWLwBIkiVTceU0k-kGPMNk7llE2MGcfBZwDtJyCACzX4vNRv4IBlBeFgwvKJa8D2ckw%3D%3D%22%5D%5D';
+function GetOutputYt(url) {
+  const options = {
+    hostname: "ytbsave.com",
+    path: "/mates/en/analyze/ajax?retry=undefined&platform=youtube",
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      Accept: "application/json, text/javascript, */*; q=0.01",
+    },
+  };
 
-async function GetFullResponse(inputUrl) {
-  try {
-    const formData = { url: inputUrl };
-    const response = await axios.post(baseUrl, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data; boundary=----WebKitFormBoundary9SOOmsSKyncbGmps",
-        Cookie: cookie,
-        Accept: "*/*",
-        "Accept-Language": "en-US,en;q=0.9",
-        DNT: "1",
-        Origin: "https://snapsave.app",
-        Referer: "https://snapsave.app/",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 Edg/127.0.0.0",
-      },
-      params: { lang: lang },
-    });
+  const data = `url=${encodeURIComponent(url)}&ajax=1&lang=en`;
+  options.headers["Content-Length"] = Buffer.byteLength(data);
 
-    const obfuscatedCode = response.data;
-    return EvalDecode(obfuscatedCode);
-  } catch (error) {
-    console.error("Error fetching full response:", error);
-    return null;
-  }
-}
+  function makeRequest(maxRetries = 3) {
+    let retries = 0;
 
-function EvalDecode(source) {
-  try {
-    const self = this;
-    self._eval = self.eval;
-    self.eval = (_code) => {
-      self.eval = self._eval;
-      return _code;
-    };
-    return self._eval(source);
-  } catch (error) {
-    return `Error decoding code: ${error.message}`;
-  }
-}
+    function attemptRequest() {
+      return new Promise((resolve, reject) => {
+        const req = https.request(options, (res) => {
+          let responseData = "";
+          res.on("data", (chunk) => {
+            responseData += chunk;
+          });
 
-function extractDownloadLinks(htmlContent) {
-  const $ = cheerio.load(htmlContent);
-  const downloadLinks = {};
-  $("tbody tr").each((index, element) => {
-    const tdText = $(element).find("td").first().text().trim();
-    if (tdText === "360p (SD)") {
-      downloadLinks.SD = $(element).find('a[href^="https://d.rapidcdn.app/"]').attr("href");
-      return false;
+          res.on("end", () => {
+            try {
+              const jsonData = JSON.parse(responseData);
+              const $ = cheerio.load(jsonData.result);
+              const downloadLink = $('a[data-ftype="mp4"][data-fquality="128"]').attr("href");
+              const title = $("#video_title").text().trim();
+              resolve({ downloadLink, title });
+            } catch (error) {
+              reject(error);
+            }
+          });
+        });
+
+        req.on("error", (error) => {
+          if (retries < maxRetries) {
+            retries++;
+            console.log(`Retrying request... (${retries}/${maxRetries})`);
+            attemptRequest().then(resolve).catch(reject);
+          } else {
+            reject(error);
+          }
+        });
+
+        req.write(data);
+        req.end();
+      });
     }
-  });
-  return downloadLinks;
-}
 
-function extractHTMLFromJS(jsCode) {
-  const htmlMatch = jsCode.match(/innerHTML = "(.*?)";/);
-  if (htmlMatch && htmlMatch[1]) {
-    return htmlMatch[1].replace(/\\"/g, '"').replace(/\\\\"/g, '\\"');
+    return attemptRequest();
   }
-  return null;
+
+  return makeRequest();
 }
 
 async function downloadVideoAudio(videoUrl, senderId, sendMessage, pageAccessToken) {
@@ -77,21 +73,17 @@ async function downloadVideoAudio(videoUrl, senderId, sendMessage, pageAccessTok
     const filePath = path.join(tempFolder, "audio.mp3");
     const writer = fs.createWriteStream(filePath);
 
-    const fullResponse = await GetFullResponse(videoUrl);
-    const extractedHTML = extractHTMLFromJS(fullResponse);
-    const links = extractDownloadLinks(extractedHTML);
+    const { downloadLink, title } = await GetOutputYt(videoUrl);
 
-    // Check if the SD link is valid
-    if (!links.SD) {
-      console.error("No valid download link found for SD quality.");
+    if (!downloadLink) {
+      console.error("No valid download link found.");
       await sendMessage(senderId, { text: "No valid download link found." }, pageAccessToken);
       return;
     }
 
-    // Log the extracted URL for debugging
-    console.log("Downloading from URL:", links.SD);
+    console.log("Downloading from URL:", downloadLink);
 
-    const response = await axios.get(links.SD, { responseType: "stream" });
+    const response = await axios.get(downloadLink, { responseType: "stream" });
     response.data.pipe(writer);
 
     await new Promise((resolve, reject) => {
@@ -114,7 +106,6 @@ async function downloadVideoAudio(videoUrl, senderId, sendMessage, pageAccessTok
     await sendMessage(senderId, { text: "An error occurred while processing your request." }, pageAccessToken);
   }
 }
-
 
 module.exports = {
   name: "sing",
