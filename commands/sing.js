@@ -4,6 +4,35 @@ const axios = require('axios');
 
 const youtube = new Client();
 
+// Generic retry function for operations like searching and downloading
+async function retryOperation(operation, retries = 2) {
+  let attempt = 0;
+  while (attempt <= retries) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt === retries) throw error;
+      attempt++;
+      console.warn(`Attempt ${attempt} failed. Retrying...`);
+    }
+  }
+}
+
+// Retry function specifically for sending messages
+async function retrySendMessage(sendMessage, senderId, messageContent, pageAccessToken, retries = 2) {
+  let attempt = 0;
+  while (attempt <= retries) {
+    try {
+      await sendMessage(senderId, messageContent, pageAccessToken);
+      return;
+    } catch (error) {
+      if (attempt === retries) throw error;
+      attempt++;
+      console.warn(`Message send attempt ${attempt} failed. Retrying...`);
+    }
+  }
+}
+
 module.exports = {
   name: "sing",
   description: "downloads mp3 from youtube",
@@ -13,43 +42,35 @@ module.exports = {
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const searchQuery = args.join(" ");
     
-    // If there's no search query, respond with a message
     if (!searchQuery) {
       console.error("No search query provided.");
-      return sendMessage(senderId, { text: "Please provide a search keyword or a YouTube link." }, pageAccessToken);
+      return retrySendMessage(sendMessage, senderId, { text: "Please provide a search keyword or a YouTube link." }, pageAccessToken);
     }
 
     try {
       console.log(`Searching YouTube for: ${searchQuery}`);
-      
-      // Search YouTube for the query
-      const searchResults = await youtube.search(searchQuery, { type: "video" });
+      const searchResults = await retryOperation(() => youtube.search(searchQuery, { type: "video" }));
       
       if (!searchResults.items.length) {
         console.error(`No results found for: ${searchQuery}`);
-        return sendMessage(senderId, { text: "No results found. Please try again with a different keyword." }, pageAccessToken);
+        return retrySendMessage(sendMessage, senderId, { text: "No results found. Please try again with a different keyword." }, pageAccessToken);
       }
 
-      // Select the first video from the search results
       const video = searchResults.items[0];
       const videoId = video.id?.videoId || video.id;
       
-      // Notify the user that the download is starting
       console.log(`Downloading audio for video: ${video.title}`);
-      sendMessage(senderId, { text: `Downloading "${video.title}" as audio...` }, pageAccessToken);
+      await retrySendMessage(sendMessage, senderId, { text: `Downloading "${video.title}" as audio...` }, pageAccessToken);
 
       try {
-        // Attempt to download the video using ytdown
-        const videoInfo = await ytdown(`https://youtu.be/${videoId}`);
+        const videoInfo = await retryOperation(() => ytdown(`https://youtu.be/${videoId}`));
 
         if (videoInfo.status) {
           const videoData = videoInfo.data;
           const videoDownloadUrl = videoData.video;
 
           console.log(`Download successful: ${video.title}`);
-          
-          // Send the audio file using the video URL directly
-          sendMessage(senderId, {
+          await retrySendMessage(sendMessage, senderId, {
             attachment: {
               type: 'audio',
               payload: {
@@ -61,19 +82,17 @@ module.exports = {
 
         } else {
           console.error(`Failed to download audio for video: ${video.title}`);
-          sendMessage(senderId, { text: "Failed to download the audio." }, pageAccessToken);
+          await retrySendMessage(sendMessage, senderId, { text: "Failed to download the audio." }, pageAccessToken);
         }
 
       } catch (error) {
-        // Log the specific error for the download failure
         console.error("Download Error:", error);
-        sendMessage(senderId, { text: "An error occurred while trying to play the song." }, pageAccessToken);
+        await retrySendMessage(sendMessage, senderId, { text: "An error occurred while trying to play the song." }, pageAccessToken);
       }
 
     } catch (error) {
-      // Log the specific error for the search failure
       console.error("Search Error:", error);
-      sendMessage(senderId, { text: "An error occurred while searching for the video." }, pageAccessToken);
+      await retrySendMessage(sendMessage, senderId, { text: "An error occurred while searching for the video." }, pageAccessToken);
     }
   }
 };
