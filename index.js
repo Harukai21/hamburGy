@@ -1,3 +1,5 @@
+// index.js
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
@@ -6,6 +8,7 @@ const { handleMessage } = require('./handles/handleMessage');
 const { handlePostback } = require('./handles/handlePostback');
 const { handleAttachment } = require('./handles/handleAttachment');
 const { startAutoPost } = require('./utils/autopost');
+const { markSeen } = require('./markSeen'); // Import markSeen
 const axios = require('axios');
 
 const app = express();
@@ -44,7 +47,12 @@ app.post('/webhook', (req, res) => {
 
     if (body.object === 'page') {
         body.entry.forEach(entry => {
-            entry.messaging.forEach(event => {
+            entry.messaging.forEach(async event => {
+                const senderId = event.sender.id;
+
+                // Mark the message as seen immediately
+                markSeen(senderId, PAGE_ACCESS_TOKEN).catch(error => console.error("Failed to mark seen:", error));
+
                 if (event.message) {
                     if (event.message.text) {
                         handleMessage(event, PAGE_ACCESS_TOKEN);
