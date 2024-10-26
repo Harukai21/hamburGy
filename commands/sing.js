@@ -74,7 +74,6 @@ async function downloadVideoAudio(videoUrl, senderId, sendMessage, pageAccessTok
   try {
     const tempFolder = await fs.mkdtemp(path.join(os.tmpdir(), "audio-"));
     const filePath = path.join(tempFolder, "audio.mp3");
-    const writer = await fs.open(filePath, "w");
 
     const { downloadLink, title } = await GetOutputYt(videoUrl);
 
@@ -86,7 +85,9 @@ async function downloadVideoAudio(videoUrl, senderId, sendMessage, pageAccessTok
 
     console.log("Downloading from URL:", downloadLink);
 
-    const response = await axios.get(downloadLink, {
+    const response = await axios({
+      url: downloadLink,
+      method: "GET",
       responseType: "stream",
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
@@ -95,14 +96,14 @@ async function downloadVideoAudio(videoUrl, senderId, sendMessage, pageAccessTok
       },
     });
 
-    const stream = response.data.pipe(writer.createWriteStream());
+    const writer = fs.createWriteStream(filePath);
+    response.data.pipe(writer);
 
     await new Promise((resolve, reject) => {
-      stream.on("finish", resolve);
-      stream.on("error", reject);
+      writer.on("finish", resolve);
+      writer.on("error", reject);
     });
 
-    const audioStream = await fs.open(filePath, "r");
     await sendMessage(senderId, {
       attachment: {
         type: "audio",
@@ -111,7 +112,7 @@ async function downloadVideoAudio(videoUrl, senderId, sendMessage, pageAccessTok
     }, pageAccessToken);
 
     await fs.unlink(filePath);
-    await fs.rmdir(tempFolder);
+    await fs.rmdir(tempFolder, { recursive: true });
   } catch (error) {
     console.error("Error:", error);
     await sendMessage(senderId, { text: "An error occurred while processing your request." }, pageAccessToken);
