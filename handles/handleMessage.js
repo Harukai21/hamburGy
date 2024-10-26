@@ -32,7 +32,12 @@ async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
   const messageText = event.message.text.trim();
 
-  await sendSenderAction(senderId, pageAccessToken, 'mark_seen');
+  // Mark the incoming message as seen immediately
+  sendSenderAction(senderId, pageAccessToken, 'mark_seen').catch(error => {
+    console.error("Failed to mark seen:", error);
+  });
+
+  // Then show typing indicator
   await sendSenderAction(senderId, pageAccessToken, 'typing_on');
 
   const chatCommand = commands.get('chat');
