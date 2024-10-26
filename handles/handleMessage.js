@@ -17,7 +17,7 @@ for (const file of commandFiles) {
 // Replacing sendSenderAction with setTypingIndicator
 async function setTypingIndicator(senderId, pageAccessToken, action = 'typing_on', retries = 3) {
   try {
-    await axios.post(`https://graph.facebook.com/v11.0/me/messages?access_token=${pageAccessToken}`, {
+    await axios.post(`https://graph.facebook.com/v21.0/me/messages?access_token=${pageAccessToken}`, {
       recipient: { id: senderId },
       sender_action: action
     });
