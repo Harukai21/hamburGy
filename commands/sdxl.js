@@ -1,6 +1,7 @@
 const axios = require('axios');
 const fs = require('fs-extra');
 const path = require('path');
+const FormData = require('form-data');
 
 module.exports = {
   name: 'sdxl',
@@ -65,7 +66,7 @@ module.exports = {
       formData.append('access_token', pageAccessToken);
 
       const uploadResponse = await axios.post(
-        `https://graph.facebook.com/v20.0/me/message_attachments?access_token=${pageAccessToken}`,
+        `https://graph.facebook.com/v21.0/me/message_attachments?access_token=${pageAccessToken}`,
         formData,
         { headers: formData.getHeaders() }
       );
