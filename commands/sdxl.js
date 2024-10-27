@@ -48,7 +48,7 @@ module.exports = {
           img_width: 1024,
           img_height: 1024,
           refiner: true,
-          base64: true
+          base64: false 
         },
         {
           headers: {
