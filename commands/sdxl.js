@@ -6,7 +6,7 @@ module.exports = {
   name: 'sdxl',
   description: 'Generate images using Segmind SDXL1.0 TXT2IMG API.',
   usage: '/sdxl <prompt>',
-  author: 'Biru',
+  author: 'Cruizex',
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const prompt = args.join(' ').trim();
@@ -59,12 +59,25 @@ module.exports = {
       const outputFileName = path.join(cacheDirectory, 'generated_image.png');
       await fs.writeFile(outputFileName, imageData);
 
+      // Upload the image to Facebook's Attachment Upload API
+      const formData = new FormData();
+      formData.append('message', fs.createReadStream(outputFileName));
+      formData.append('access_token', pageAccessToken);
+
+      const uploadResponse = await axios.post(
+        `https://graph.facebook.com/v20.0/me/message_attachments?access_token=${pageAccessToken}`,
+        formData,
+        { headers: formData.getHeaders() }
+      );
+
+      const attachmentId = uploadResponse.data.attachment_id;
+
       // Send the generated image to the user
       await sendMessage(senderId, {
         attachment: {
           type: 'image',
           payload: {
-            url: `file://${outputFileName}`
+            attachment_id: attachmentId
           }
         }
       }, pageAccessToken);
