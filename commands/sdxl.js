@@ -1,4 +1,5 @@
 const axios = require('axios');
+const FormData = require('form-data');
 
 module.exports = {
   name: 'sdxl',
@@ -52,17 +53,27 @@ module.exports = {
       );
 
       const imageData = Buffer.from(response.data, 'binary');
-
-      // Send the generated image directly to the user
-      await sendMessage(senderId, {
+      const form = new FormData();
+      form.append('recipient', JSON.stringify({ id: senderId }));
+      form.append('message', JSON.stringify({
         attachment: {
           type: 'image',
           payload: {
-            is_reusable: true // Set reusable if you want to use the image again
+            is_reusable: true
           }
-        },
-        filedata: imageData
-      }, pageAccessToken);
+        }
+      }));
+      form.append('filedata', imageData, {
+        filename: 'generated_image.png',
+        contentType: 'image/png'
+      });
+
+      // Send the image to the user via Messenger
+      await axios.post(
+        `https://graph.facebook.com/v12.0/me/messages?access_token=${pageAccessToken}`,
+        form,
+        { headers: form.getHeaders() }
+      );
 
     } catch (error) {
       console.error('Error generating image:', error.message);
