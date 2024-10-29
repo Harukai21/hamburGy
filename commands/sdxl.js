@@ -1,6 +1,4 @@
 const axios = require('axios');
-const fs = require('fs-extra');
-const path = require('path');
 
 module.exports = {
   name: 'sdxl',
@@ -24,8 +22,6 @@ module.exports = {
       }, pageAccessToken);
 
       const segmindApiKey = 'SG_b9657f03ca966ed5';
-      const cacheDirectory = path.join(__dirname, 'cache');
-      await fs.ensureDir(cacheDirectory);
 
       // Call the Segmind SDXL1.0 API to generate image
       const response = await axios.post(
@@ -44,7 +40,7 @@ module.exports = {
           img_width: 1024,
           img_height: 1024,
           refiner: true,
-          base64: true
+          base64: false
         },
         {
           headers: {
@@ -56,21 +52,17 @@ module.exports = {
       );
 
       const imageData = Buffer.from(response.data, 'binary');
-      const outputFileName = path.join(cacheDirectory, 'generated_image.png');
-      await fs.writeFile(outputFileName, imageData);
 
-      // Send the generated image to the user
+      // Send the generated image directly to the user
       await sendMessage(senderId, {
         attachment: {
           type: 'image',
           payload: {
-            url: `file://${outputFileName}`
+            is_reusable: true // Set reusable if you want to use the image again
           }
-        }
+        },
+        filedata: imageData
       }, pageAccessToken);
-
-      // Clean up the cache directory
-      await fs.remove(outputFileName);
 
     } catch (error) {
       console.error('Error generating image:', error.message);
