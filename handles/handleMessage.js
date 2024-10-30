@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 const { sendMessage } = require('./sendMessage');
 const { activeChats } = require('../commands/chat');
-const gpt = require('../commands/gpt'); // Import GPT command
 
 const commands = new Map();
 const prefix = '/';
@@ -56,20 +55,23 @@ async function handleMessage(event, pageAccessToken) {
     if (commands.has(commandName)) {
       const command = commands.get(commandName);
       await command.execute(senderId, args, pageAccessToken, sendMessage);
+    } else if (commandName !== 'no') {
+      await sendMessage(senderId, { 
+        text: `𝖳𝗁𝖾 𝖼𝗈𝗆𝗆𝖺𝗇𝖽 "${messageText}" 𝖽𝗈e𝗌 𝗇𝗈𝗍 𝖾𝗑𝗂𝗌𝗍. 𝖯𝗅𝖾𝖺𝗌𝖾 𝗍𝗒𝗉𝖾 /𝗁𝖾𝗅𝗉 𝗍𝗈 𝗌𝖾𝖾 𝗍𝗁𝖾 𝗅𝗂𝗌𝗍 𝗈𝖿 𝖼𝗈𝗆𝗆𝖺𝗇𝖽𝗌.` 
+      }, pageAccessToken);
+   
       await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
-      return;
+      return; 
     }
-  }
-
-  const aiCommand = commands.get('ai');
-  if (gpt.isGptMode(senderId)) {
-    await gpt.execute(senderId, [messageText], pageAccessToken, sendMessage);
-  } else if (aiCommand) {
-    await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
+  } else {
+    // Continue AI response only if no command prefix is used and no active chat
+    const aiCommand = commands.get('ai');
+    if (aiCommand) {
+      await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
+    }
   }
 
   await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
 }
 
 module.exports = { handleMessage };
-
