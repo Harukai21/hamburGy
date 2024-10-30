@@ -48,6 +48,7 @@ async function handleMessage(event, pageAccessToken) {
     return;
   }
 
+  // Check if the message starts with the prefix
   if (messageText.startsWith(prefix)) {
     const args = messageText.slice(prefix.length).split(/\s+/);
     const commandName = args.shift().toLowerCase();
@@ -57,21 +58,30 @@ async function handleMessage(event, pageAccessToken) {
       await command.execute(senderId, args, pageAccessToken, sendMessage);
     } else if (commandName !== 'no') {
       await sendMessage(senderId, { 
-        text: `𝖳𝗁𝖾 𝖼𝗈𝗆𝗆𝖺𝗇𝖽 "${messageText}" 𝖽𝗈e𝗌 𝗇𝗈𝗍 𝖾𝗑𝗂𝗌𝗍. 𝖯𝗅𝖾𝖺𝗌𝖾 𝗍𝗒𝗉𝖾 /𝗁𝖾𝗅𝗉 𝗍𝗈 𝗌𝖾𝖾 𝗍𝗁𝖾 𝗅𝗂𝗌𝗍 𝗈𝖿 𝖼𝗈𝗆𝗆𝖺𝗇𝖽𝗌.` 
+        text: `𝖳𝗁𝖾 𝖼𝗈𝗆𝗆𝖺𝗇𝖽 "${messageText}" 𝖽𝗈𝖾𝗌 𝗇𝗈𝗍 𝖾𝗑𝗂𝗌𝗍. 𝖯𝗅𝖾𝖺𝗌𝖾 𝗍𝗒𝗉𝖾 /𝗁𝖾𝗅𝗉 𝗍𝗈 𝗌𝖾𝖾 𝗍𝗁𝖾 𝗅𝗂𝗌𝗍 𝗈𝖿 𝖼𝗈𝗆𝗆𝖺𝗇𝖽𝗌.` 
       }, pageAccessToken);
-   
       await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
       return; 
     }
   } else {
-    // Continue AI response only if no command prefix is used and no active chat
-    const aiCommand = commands.get('ai');
-    if (aiCommand) {
-      await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
+    // Check if the message text matches a command name without the prefix
+    const commandName = messageText.toLowerCase().split(/\s+/)[0];
+    if (commands.has(commandName)) {
+      // Notify the user that the command needs a prefix
+      await sendMessage(senderId, { 
+        text: `This command needs a prefix. Please use "${prefix}${commandName}".` 
+      }, pageAccessToken);
+    } else {
+      // Continue AI response only if no command prefix is used and no active chat
+      const aiCommand = commands.get('ai');
+      if (aiCommand) {
+        await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
+      }
     }
   }
 
   await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
 }
+
 
 module.exports = { handleMessage };
