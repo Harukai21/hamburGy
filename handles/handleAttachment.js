@@ -1,5 +1,22 @@
 const { execute: aiExecute } = require('../commands/ai'); // Import AI handler
 const { sendMessage } = require('./sendMessage'); // Import sendMessage
+const axios = require('axios');
+
+async function setTypingIndicator(senderId, pageAccessToken, action = 'typing_on', retries = 3) {
+  try {
+    await axios.post(`https://graph.facebook.com/v21.0/me/messages?access_token=${pageAccessToken}`, {
+      recipient: { id: senderId },
+      sender_action: action
+    });
+  } catch (error) {
+    console.error(`Error setting typing indicator to ${action}:`, error);
+    if (retries > 0 && (error.code === 'ETIMEDOUT' || error.code === 'ENETUNREACH')) {
+      console.log(`Retrying ${action}... (${3 - retries} retries left)`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await setTypingIndicator(senderId, pageAccessToken, action, retries - 1);
+    }
+  }
+}
 
 async function handleAttachment(event, PAGE_ACCESS_TOKEN) {
   const senderId = event.sender.id;
@@ -10,13 +27,19 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN) {
       case 'image':
         console.log(`Image received: ${attachment.payload.url}`);
 
-        // Directly process the image with AI execute
+        // Turn on typing indicator
+        await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_on');
+
+        // Process the image with AI execute
         await aiExecute(
           senderId,
           `recognize_image:${attachment.payload.url}`, // Pass image URL for recognition
           PAGE_ACCESS_TOKEN,
           sendMessage
         );
+
+        // Turn off typing indicator
+        await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_off');
         break;
 
       case 'video':
