@@ -2,19 +2,17 @@ const axios = require('axios');
 
 module.exports = {
   name: 'ai',
-  description: 'Handles AI responses for incoming messages',
+  description: 'Handles AI responses for incoming messages and images',
   author: 'Biru',
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
-    const userMessage = Array.isArray(args) ? args.join(' ') : args; // Ensure args is a string
+    const userMessage = args ? (Array.isArray(args) ? args.join(' ') : args) : '';
 
     try {
-      const urlPattern = /(https?:\/\/[^\s]+)/g;
-      const foundUrls = userMessage.match(urlPattern);
-
       let apiUrl;
-      if (foundUrls) {
-        const imageUrl = foundUrls[0];
+
+      if (userMessage.startsWith('recognize_image:')) {
+        const imageUrl = userMessage.replace('recognize_image:', '');
         apiUrl = `https://vneerapi.onrender.com/gpt4o?prompt=recognize_image:${encodeURIComponent(imageUrl)}&uid=${senderId}`;
       } else {
         apiUrl = `https://vneerapi.onrender.com/gpt4o?prompt=${encodeURIComponent(userMessage)}&uid=${senderId}`;
@@ -24,10 +22,7 @@ module.exports = {
       let message = response.data.message || 'No response from the API';
       const generatedImageUrl = response.data.img_urls?.[0];
 
-      // Remove unwanted text
       message = message.replace(/generateImage\s*\n*/, '').replace(/!\[.*?\]\(.*?\)/g, '').trim();
-
-      // Split message into chunks and send each chunk in sequence
       const maxMessageLength = 2000;
       const messages = splitMessageIntoChunks(message, maxMessageLength);
 
