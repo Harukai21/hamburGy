@@ -6,7 +6,7 @@ module.exports = {
   author: 'Biru',
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
-    const userMessage = args.join(' ');
+    const userMessage = Array.isArray(args) ? args.join(' ') : args; // Ensure args is a string
 
     try {
       const urlPattern = /(https?:\/\/[^\s]+)/g;
