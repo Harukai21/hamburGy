@@ -26,22 +26,32 @@ module.exports = {
 
       // Search for the video
       const searchResults = await yt.music.search(searchQuery, { type: "video" });
+      console.log("Search Results:", searchResults);
+
       if (!searchResults.results.length) {
         console.log("No search results found.");
         return sendMessage(senderId, { text: "No results found. Please try again with a different keyword." }, pageAccessToken);
       }
 
       const video = searchResults.results[0];
-      const videoTitle = video.title;
-      console.log(`Found video: ${videoTitle}`);
+      const videoTitle = video.title || "Unknown Title";
+      console.log(`Found video: ${videoTitle} (ID: ${video.id})`);
 
       await sendMessage(senderId, { text: `🔍 Found "${videoTitle}", preparing audio...` }, pageAccessToken);
 
       // Get basic video info
       const info = await yt.getBasicInfo(video.id);
-      
+      console.log("Video Basic Info:", info);
+
+      if (!info.streaming_data || !info.streaming_data.formats) {
+        console.log("No streaming data available.");
+        return sendMessage(senderId, { text: "Failed to retrieve audio URL. No streaming data available." }, pageAccessToken);
+      }
+
       // Find the first available audio format
-      const audioFormat = info.streaming_data?.formats.find(format => format.mimeType.includes('audio'));
+      const audioFormat = info.streaming_data.formats.find(format => format.mimeType.includes('audio'));
+      console.log("Audio Format:", audioFormat);
+
       if (!audioFormat) {
         console.log("No valid audio format found.");
         return sendMessage(senderId, { text: "Failed to retrieve audio URL. No audio format found." }, pageAccessToken);
@@ -69,7 +79,7 @@ module.exports = {
       }
 
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error during execution:", error);
       await sendMessage(senderId, { text: "An error occurred while processing your request. Please try again later." }, pageAccessToken);
     }
   }
