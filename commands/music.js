@@ -4,10 +4,9 @@ module.exports = {
   name: 'Music',
   description: 'Command that lets you play any of your favorite music.',
   usage: '/Music [title]',
-  
   author: 'libyzxy0',
 
-  async execute({ senderId, args, pageAccessToken, sendMessage }) {
+  async execute({ senderId, args = [], pageAccessToken, sendMessage }) {  // Default args to an empty array
     if (args.length < 1) {
       return sendMessage(senderId, { text: "⚠️ Invalid Use Of Command!\n💡 Usage: Music [title]" }, pageAccessToken);
     }
