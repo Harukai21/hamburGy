@@ -6,7 +6,12 @@ module.exports = {
   usage: '/Music [title]',
   author: 'libyzxy0',
 
-  async execute({ senderId, args = [], pageAccessToken, sendMessage }) {  // Default args to an empty array
+  async execute({ senderId, args = [], pageAccessToken, sendMessage = () => {} }) {  // Set default for sendMessage
+    if (typeof sendMessage !== "function") {
+      console.error("sendMessage is not a valid function");
+      return;
+    }
+    
     if (args.length < 1) {
       return sendMessage(senderId, { text: "⚠️ Invalid Use Of Command!\n💡 Usage: Music [title]" }, pageAccessToken);
     }
