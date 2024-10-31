@@ -6,23 +6,16 @@ module.exports = {
   usage: '/Music [title]',
   author: 'libyzxy0',
 
-  async execute({ senderId, args = [], pageAccessToken, sendMessage = () => {} }) {
-    console.log("Executing Music command...");
-
-    if (typeof sendMessage !== "function") {
-      console.error("sendMessage is not a valid function");
-      return;
-    }
-
-    if (args.length < 1) {
+  async execute(senderId, args, pageAccessToken, sendMessage) {
+    if (!args || args.length < 1) {
       console.log("No arguments provided.");
       return sendMessage(senderId, { text: "⚠️ Invalid Use Of Command!\n💡 Usage: Music [title]" }, pageAccessToken);
     }
 
     try {
-      const query = args.join(" ");
-      console.log(`Searching for query: ${query}`);
-      await sendMessage(senderId, { text: `🔍 Searching for "${query}"...` }, pageAccessToken);
+      const searchQuery = args.join(" ");
+      console.log(`Searching for query: ${searchQuery}`);
+      await sendMessage(senderId, { text: `🔍 Searching for "${searchQuery}"...` }, pageAccessToken);
 
       const yt = await Innertube.create({
         cache: new UniversalCache(false),
@@ -32,7 +25,7 @@ module.exports = {
       console.log("YouTube instance created.");
 
       // Search for the video
-      const searchResults = await yt.music.search(query, { type: "video" });
+      const searchResults = await yt.music.search(searchQuery, { type: "video" });
       if (!searchResults.results.length) {
         console.log("No search results found.");
         return sendMessage(senderId, { text: "No results found. Please try again with a different keyword." }, pageAccessToken);
