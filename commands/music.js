@@ -6,43 +6,52 @@ module.exports = {
   usage: '/Music [title]',
   author: 'libyzxy0',
 
-  async execute({ senderId, args = [], pageAccessToken, sendMessage = () => {} }) {  // Set default for sendMessage
+  async execute({ senderId, args = [], pageAccessToken, sendMessage = () => {} }) {
+    console.log("Executing Music command...");
+
     if (typeof sendMessage !== "function") {
       console.error("sendMessage is not a valid function");
       return;
     }
-    
+
     if (args.length < 1) {
+      console.log("No arguments provided.");
       return sendMessage(senderId, { text: "⚠️ Invalid Use Of Command!\n💡 Usage: Music [title]" }, pageAccessToken);
     }
 
     try {
       const query = args.join(" ");
-      sendMessage(senderId, { text: `🔍 Searching for "${query}"...` }, pageAccessToken);
+      console.log(`Searching for query: ${query}`);
+      await sendMessage(senderId, { text: `🔍 Searching for "${query}"...` }, pageAccessToken);
 
       const yt = await Innertube.create({
         cache: new UniversalCache(false),
         generate_session_locally: true,
       });
 
+      console.log("YouTube instance created.");
+
       // Search for the video
       const searchResults = await yt.music.search(query, { type: "video" });
       if (!searchResults.results.length) {
+        console.log("No search results found.");
         return sendMessage(senderId, { text: "No results found. Please try again with a different keyword." }, pageAccessToken);
       }
 
       const video = searchResults.results[0];
       const videoTitle = video.title;
+      console.log(`Found video: ${videoTitle}`);
 
-      sendMessage(senderId, { text: `🔍 Found "${videoTitle}", preparing audio...` }, pageAccessToken);
+      await sendMessage(senderId, { text: `🔍 Found "${videoTitle}", preparing audio...` }, pageAccessToken);
 
       // Get basic video info and audio URL
       const info = await yt.getBasicInfo(video.id);
       const audioUrl = info.streaming_data?.formats[0].decipher(yt.session.player);
+      console.log(`Audio URL retrieved: ${audioUrl}`);
 
       if (audioUrl) {
-        // Send the audio file directly using the URL
-        sendMessage(senderId, {
+        console.log("Sending audio message...");
+        await sendMessage(senderId, {
           attachment: {
             type: 'audio',
             payload: {
@@ -51,13 +60,15 @@ module.exports = {
             }
           }
         }, pageAccessToken);
+        console.log("Audio message sent.");
       } else {
-        sendMessage(senderId, { text: "Failed to retrieve audio URL." }, pageAccessToken);
+        console.log("Failed to retrieve audio URL.");
+        await sendMessage(senderId, { text: "Failed to retrieve audio URL." }, pageAccessToken);
       }
 
     } catch (error) {
-      console.error(`Error: ${error}`);
-      sendMessage(senderId, { text: "An error occurred while processing your request. Please try again later." }, pageAccessToken);
+      console.error("Error:", error);
+      await sendMessage(senderId, { text: "An error occurred while processing your request. Please try again later." }, pageAccessToken);
     }
   }
 };
