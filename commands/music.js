@@ -4,8 +4,8 @@ export const config = {
   name: 'Music',
   description: 'Command that lets you play any of your favorite music.',
   usage: 'Music [title]',
-  category: 'General',
-  creator: 'libyzxy0'
+  
+  author: 'libyzxy0'
 };
 
 export async function execute({ senderId, args, pageAccessToken, sendMessage }) {
