@@ -37,9 +37,18 @@ module.exports = {
 
       await sendMessage(senderId, { text: `🔍 Found "${videoTitle}", preparing audio...` }, pageAccessToken);
 
-      // Get basic video info and audio URL
+      // Get basic video info
       const info = await yt.getBasicInfo(video.id);
-      const audioUrl = info.streaming_data?.formats[0].decipher(yt.session.player);
+      
+      // Find the first available audio format
+      const audioFormat = info.streaming_data?.formats.find(format => format.mimeType.includes('audio'));
+      if (!audioFormat) {
+        console.log("No valid audio format found.");
+        return sendMessage(senderId, { text: "Failed to retrieve audio URL. No audio format found." }, pageAccessToken);
+      }
+
+      // Retrieve and decipher the URL if required
+      const audioUrl = audioFormat.decipher ? audioFormat.decipher(yt.session.player) : audioFormat.url;
       console.log(`Audio URL retrieved: ${audioUrl}`);
 
       if (audioUrl) {
