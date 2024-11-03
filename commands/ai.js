@@ -30,6 +30,9 @@ module.exports = {
       message = message.replace(/generateImage\s*\n*/, '')
                        .replace(/browseWeb\s*\n*/, '')
                        .replace(/analyzeImage\s*\n*/, '')
+                       .replace(/retrieveUrlThe\s*\n*/, '')
+                       .replace(/withPixtral\s*\n*/, '')
+                       .replace(/analyzeImageWithPixtral\s*\n*/, '')
                        .replace(/!\[.*?\]\(.*?\)/g, '')
                        .trim();
 
