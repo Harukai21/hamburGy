@@ -18,9 +18,11 @@ async function setTypingIndicator(senderId, pageAccessToken, action = 'typing_on
   }
 }
 
-async function handleAttachment(event, PAGE_ACCESS_TOKEN) {
+async function handleAttachment(event, PAGE_ACCESS_TOKEN, command = "default") {
   const senderId = event.sender.id;
   const attachments = event.message.attachments;
+
+  const imageUrls = [];
 
   for (const attachment of attachments) {
     switch (attachment.type) {
@@ -34,19 +36,7 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN) {
           break; // Skip processing this image
         }
 
-        // Turn on typing indicator
-        await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_on');
-
-        // Process the image with AI execute
-        await aiExecute(
-          senderId,
-          `recognize_image:${imageUrl}`, // Pass image URL for recognition
-          PAGE_ACCESS_TOKEN,
-          sendMessage
-        );
-
-        // Turn off typing indicator
-        await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_off');
+        imageUrls.push(imageUrl);
         break;
 
       case 'video':
@@ -58,7 +48,16 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN) {
         break;
 
       case 'file':
-        console.log(`File received: ${attachment.payload.url}`);
+        const fileUrl = attachment.payload.url;
+        console.log(`File received: ${fileUrl}`);
+
+        // Process the document file with AI (or another handler if separate)
+        await aiExecute(
+          senderId,
+          `process_file:${fileUrl}`, // Pass file URL for processing
+          PAGE_ACCESS_TOKEN,
+          sendMessage
+        );
         break;
 
       case 'location':
@@ -69,6 +68,24 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN) {
       default:
         console.log(`Unknown attachment type received: ${attachment.type}`);
     }
+  }
+
+  // If there are multiple images, handle them as a batch
+  if (imageUrls.length > 0) {
+    // Turn on typing indicator
+    await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_on');
+
+    // Process all images together, adjusting for different commands if necessary
+    await aiExecute(
+      senderId,
+      `recognize_images:${JSON.stringify(imageUrls)}`, // Pass multiple image URLs
+      PAGE_ACCESS_TOKEN,
+      sendMessage,
+      command // Pass command for specific handling if needed
+    );
+
+    // Turn off typing indicator
+    await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_off');
   }
 }
 
