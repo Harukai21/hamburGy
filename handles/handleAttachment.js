@@ -25,7 +25,14 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN) {
   for (const attachment of attachments) {
     switch (attachment.type) {
       case 'image':
-        console.log(`Image received: ${attachment.payload.url}`);
+        const imageUrl = attachment.payload.url;
+        console.log(`Image received: ${imageUrl}`);
+
+        // Check if the URL contains the thumbs-up pattern and skip if it does
+        if (imageUrl.includes("t39.1997-6")) {
+          console.log("Thumbs-up emoji detected. Ignoring...");
+          return;
+        }
 
         // Turn on typing indicator
         await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_on');
@@ -33,7 +40,7 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN) {
         // Process the image with AI execute
         await aiExecute(
           senderId,
-          `recognize_image:${attachment.payload.url}`, // Pass image URL for recognition
+          `recognize_image:${imageUrl}`, // Pass image URL for recognition
           PAGE_ACCESS_TOKEN,
           sendMessage
         );
@@ -64,5 +71,3 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN) {
     }
   }
 }
-
-module.exports = { handleAttachment };
