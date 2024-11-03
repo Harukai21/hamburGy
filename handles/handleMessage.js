@@ -34,29 +34,30 @@ async function setTypingIndicator(senderId, pageAccessToken, action = 'typing_on
 async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
   const messageText = event.message.text.trim();
+  
+  const currentTime = Date.now();
 
-  // Check if the user is blocked and unblock them after 30 minutes
+  // Check if the user is blocked and skip handling if within the blocked period
   if (userSpamData.has(senderId) && userSpamData.get(senderId).blockedUntil) {
-    if (Date.now() < userSpamData.get(senderId).blockedUntil) {
-      console.log(`User ${senderId} is still blocked.`);
-      return; // Exit if user is still blocked
+    if (currentTime < userSpamData.get(senderId).blockedUntil) {
+      console.log(`Ignoring message from ${senderId} as they are currently blocked.`);
+      return; // Skip message handling for blocked users
     } else {
-      // Unblock the user after 30 minutes
+      // Unblock user after 30 minutes has passed
       userSpamData.delete(senderId);
       console.log(`User ${senderId} has been unblocked.`);
     }
   }
 
-  // Only typing indicator, mark_seen is removed
+  // Set typing indicator
   await setTypingIndicator(senderId, pageAccessToken, 'typing_on');
 
-  // Spam Detection Logic
+  // Initialize or update spam data for the user
   if (!userSpamData.has(senderId)) {
-    userSpamData.set(senderId, { count: 0, firstMessageTime: Date.now(), warned: false, lastMessageTime: Date.now() });
+    userSpamData.set(senderId, { count: 0, firstMessageTime: currentTime, warned: false, lastMessageTime: currentTime });
   }
 
   const userData = userSpamData.get(senderId);
-  const currentTime = Date.now();
 
   // Check message frequency
   if (currentTime - userData.lastMessageTime < 2000) { // 2 seconds threshold
@@ -81,11 +82,10 @@ async function handleMessage(event, pageAccessToken) {
       await sendMessage(senderId, { text: "Warning: Please slow down to avoid being blocked." }, pageAccessToken);
       userData.warned = true;
     } else {
-      // Block user for 30 minutes
+      // Block user for 30 minutes by setting blockedUntil timestamp
       userData.blockedUntil = currentTime + 30 * 60 * 1000;
-      await axios.post(`https://graph.facebook.com/v21.0/${senderId}/blocked?access_token=${pageAccessToken}`);
-      console.log(`User ${senderId} has been blocked for spamming.`);
-      return; // Exit function after blocking user
+      console.log(`User ${senderId} has been temporarily blocked for 30 minutes.`);
+      return; // Exit function after "blocking" the user
     }
   }
 
