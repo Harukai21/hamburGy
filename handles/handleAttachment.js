@@ -24,6 +24,9 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN, command = "default") {
 
   const imageUrls = [];
 
+  // Turn on typing indicator for the start of processing
+  await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_on');
+
   for (const attachment of attachments) {
     switch (attachment.type) {
       case 'image':
@@ -72,9 +75,6 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN, command = "default") {
 
   // If there are multiple images, handle them as a batch
   if (imageUrls.length > 0) {
-    // Turn on typing indicator
-    await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_on');
-
     // Process all images together, adjusting for different commands if necessary
     await aiExecute(
       senderId,
@@ -83,10 +83,10 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN, command = "default") {
       sendMessage,
       command // Pass command for specific handling if needed
     );
-
-    // Turn off typing indicator
-    await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_off');
   }
+
+  // Turn off typing indicator after all processing is complete
+  await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_off');
 }
 
 module.exports = { handleAttachment };
