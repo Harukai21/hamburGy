@@ -12,9 +12,9 @@ module.exports = {
 
     try {
       // Detect and handle image or document recognition commands
-      if (userMessage.startsWith('recognize_image:')) {
-        const imageUrl = userMessage.replace('recognize_image:', '');
-        apiUrl = `https://vneerapi.onrender.com/bot?prompt=recognize_image:${encodeURIComponent(imageUrl)}&uid=${senderId}`;
+      if (userMessage.startsWith('explain_or_answer:')) {
+        const imageUrl = userMessage.replace('explain_or_answer:', '');
+        apiUrl = `https://vneerapi.onrender.com/bot?prompt=explain or answer if there's any question or activities:${encodeURIComponent(imageUrl)}&uid=${senderId}`;
       } else if (userMessage.startsWith('process_file:')) {
         const fileUrl = userMessage.replace('process_file:', '');
         apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(fileUrl)}&uid=${senderId}`;
