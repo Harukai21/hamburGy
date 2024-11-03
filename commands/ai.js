@@ -27,12 +27,12 @@ module.exports = {
       const generatedImageUrl = response.data.img_urls?.[0];
 
       // Clean up response text
-      message = message.replace(/generateImage\s*\n*/, '')
-                       .replace(/browseWeb\s*\n*/, '')
-                       .replace(/analyzeImage\s*\n*/, '')
-                       .replace(/retrieveUrlThe\s*\n*/, '')
-                       .replace(/withPixtral\s*\n*/, '')
-                       .replace(/analyzeImageWithPixtral\s*\n*/, '')
+      message = message.replace(/generateImage\s*\n*/g, '')
+                       .replace(/browseWeb\s*\n*/g, '')
+                       .replace(/analyzeImage\s*\n*/g, '')
+                       .replace(/retrieveUrlThe\s*\n*/gi, '')
+                       .replace(/withPixtral\s*\n*/gi, '')
+                       .replace(/analyzeImageWithPixtral\s*\n*/gi, '')
                        .replace(/!\[.*?\]\(.*?\)/g, '')
                        .trim();
 
