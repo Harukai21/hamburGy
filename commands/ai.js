@@ -17,7 +17,7 @@ module.exports = {
         apiUrl = `https://vneerapi.onrender.com/bot?prompt=recognize_image:${encodeURIComponent(imageUrl)}&uid=${senderId}`;
       } else if (userMessage.startsWith('process_file:')) {
         const fileUrl = userMessage.replace('process_file:', '');
-        apiUrl = `https://vneerapi.onrender.com/bot?prompt=process_file:${encodeURIComponent(fileUrl)}&uid=${senderId}`;
+        apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(fileUrl)}&uid=${senderId}`;
       } else {
         apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&uid=${senderId}`;
       }
