@@ -28,10 +28,10 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN) {
         const imageUrl = attachment.payload.url;
         console.log(`Image received: ${imageUrl}`);
 
-        // Check if the URL contains the thumbs-up pattern and skip if it does
-        if (imageUrl.includes("t39.1997-6")) {
-          console.log("Thumbs-up emoji detected. Ignoring...");
-          return;
+        // Check if the image URL contains "t39.1997-6" (indicating a thumbs-up emoji)
+        if (imageUrl.includes('t39.1997-6')) {
+          console.log('Thumbs-up emoji detected, ignoring image.');
+          break; // Skip processing this image
         }
 
         // Turn on typing indicator
@@ -71,3 +71,5 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN) {
     }
   }
 }
+
+module.exports = { handleAttachment };
