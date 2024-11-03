@@ -13,7 +13,8 @@ for (const file of commandFiles) {
   commands.set(command.name.toLowerCase(), command);
 }
 
-// Replacing sendSenderAction with setTypingIndicator
+const userSpamData = new Map();
+
 async function setTypingIndicator(senderId, pageAccessToken, action = 'typing_on', retries = 3) {
   try {
     await axios.post(`https://graph.facebook.com/v21.0/me/messages?access_token=${pageAccessToken}`, {
@@ -34,8 +35,59 @@ async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
   const messageText = event.message.text.trim();
 
+  // Check if the user is blocked and unblock them after 30 minutes
+  if (userSpamData.has(senderId) && userSpamData.get(senderId).blockedUntil) {
+    if (Date.now() < userSpamData.get(senderId).blockedUntil) {
+      console.log(`User ${senderId} is still blocked.`);
+      return; // Exit if user is still blocked
+    } else {
+      // Unblock the user after 30 minutes
+      userSpamData.delete(senderId);
+      console.log(`User ${senderId} has been unblocked.`);
+    }
+  }
+
   // Only typing indicator, mark_seen is removed
   await setTypingIndicator(senderId, pageAccessToken, 'typing_on');
+
+  // Spam Detection Logic
+  if (!userSpamData.has(senderId)) {
+    userSpamData.set(senderId, { count: 0, firstMessageTime: Date.now(), warned: false, lastMessageTime: Date.now() });
+  }
+
+  const userData = userSpamData.get(senderId);
+  const currentTime = Date.now();
+
+  // Check message frequency
+  if (currentTime - userData.lastMessageTime < 2000) { // 2 seconds threshold
+    userData.count++;
+  } else {
+    userData.count = 1;
+  }
+
+  userData.lastMessageTime = currentTime;
+
+  // Reset spam count if 12 seconds have passed
+  if (currentTime - userData.firstMessageTime > 12000) {
+    userData.count = 1;
+    userData.firstMessageTime = currentTime;
+    userData.warned = false;
+  }
+
+  // If spam threshold is reached
+  if (userData.count >= 8) {
+    if (!userData.warned) {
+      // Send warning message
+      await sendMessage(senderId, { text: "Warning: Please slow down to avoid being blocked." }, pageAccessToken);
+      userData.warned = true;
+    } else {
+      // Block user for 30 minutes
+      userData.blockedUntil = currentTime + 30 * 60 * 1000;
+      await axios.post(`https://graph.facebook.com/v21.0/${senderId}/blocked?access_token=${pageAccessToken}`);
+      console.log(`User ${senderId} has been blocked for spamming.`);
+      return; // Exit function after blocking user
+    }
+  }
 
   const chatCommand = commands.get('chat');
   if (activeChats.has(senderId)) {
@@ -58,21 +110,18 @@ async function handleMessage(event, pageAccessToken) {
       await command.execute(senderId, args, pageAccessToken, sendMessage);
     } else if (commandName !== 'no') {
       await sendMessage(senderId, { 
-        text: `𝖳𝗁𝖾 𝖼𝗈𝗆𝗆𝖺𝗇𝖽 "${messageText}" 𝖽𝗈𝖾𝗌 𝗇𝗈𝗍 𝖾𝗑𝗂𝗌𝗍. 𝖯𝗅𝖾𝖺𝗌𝖾 𝗍𝗒𝗉𝖾 /𝗁𝖾𝗅𝗉 𝗍𝗈 𝗌𝖾𝖾 𝗍𝗁𝖾 𝗅𝗂𝗌𝗍 𝗈𝖿 𝖼𝗈𝗆𝗆𝖺𝗇𝖽𝗌.` 
+        text: `The command "${messageText}" does not exist. Please type /help to see the list of commands.` 
       }, pageAccessToken);
       await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
       return; 
     }
   } else {
-    // Check if the message text matches a command name without the prefix
     const commandName = messageText.toLowerCase().split(/\s+/)[0];
     if (commands.has(commandName)) {
-      // Notify the user that the command needs a prefix
       await sendMessage(senderId, { 
         text: `This command needs a prefix. Please use "${prefix}${commandName}".` 
       }, pageAccessToken);
     } else {
-      // Continue AI response only if no command prefix is used and no active chat
       const aiCommand = commands.get('ai');
       if (aiCommand) {
         await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
@@ -82,6 +131,5 @@ async function handleMessage(event, pageAccessToken) {
 
   await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
 }
-
 
 module.exports = { handleMessage };
