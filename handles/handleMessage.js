@@ -41,6 +41,12 @@ async function handleMessage(event, pageAccessToken) {
   if (userSpamData.has(senderId) && userSpamData.get(senderId).blockedUntil) {
     if (currentTime < userSpamData.get(senderId).blockedUntil) {
       console.log(`Ignoring message from ${senderId} as they are currently blocked.`);
+      
+      // Notify the user that they are currently blocked
+      await sendMessage(senderId, { 
+        text: "You have been temporarily blocked for 30 minutes due to excessive messaging. Please try again later." 
+      }, pageAccessToken);
+      
       return; // Skip message handling for blocked users
     } else {
       // Unblock user after 30 minutes has passed
@@ -85,6 +91,12 @@ async function handleMessage(event, pageAccessToken) {
       // Block user for 30 minutes by setting blockedUntil timestamp
       userData.blockedUntil = currentTime + 30 * 60 * 1000;
       console.log(`User ${senderId} has been temporarily blocked for 30 minutes.`);
+      
+      // Notify the user that they are now blocked
+      await sendMessage(senderId, { 
+        text: "You have been temporarily blocked for 30 minutes due to excessive messaging. Please try again later." 
+      }, pageAccessToken);
+      
       return; // Exit function after "blocking" the user
     }
   }
