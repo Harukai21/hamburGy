@@ -1,6 +1,7 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const FormData = require('form-data');
 
 module.exports = {
   name: "itunes",
@@ -79,29 +80,33 @@ module.exports = {
           return sendMessage(senderId, { text: "An error occurred while preparing the file. Please try again." }, pageAccessToken);
         }
 
-        // Send the media file as an attachment
-        const attachment = fs.createReadStream(tempFilePath);
-        const attachmentType = isVideo ? 'video' : 'audio';
-
-        sendMessage(senderId, {
+        // Prepare the form-data request for Facebook's API
+        const form = new FormData();
+        form.append('recipient', JSON.stringify({ id: senderId }));
+        form.append('message', JSON.stringify({
           attachment: {
-            type: attachmentType,
-            payload: {} // Empty payload for file attachments
-          },
-          filedata: attachment
-        }, pageAccessToken, (error) => {
-          if (error) {
-            console.error("Error sending message:", error);
+            type: isVideo ? 'video' : 'audio',
+            payload: {}
           }
+        }));
+        form.append('filedata', fs.createReadStream(tempFilePath));
 
-          // Delete the file regardless of success/failure in sending
-          fs.unlink(tempFilePath, (err) => {
-            if (err) {
-              console.error("Error deleting temporary file:", err);
-            } else {
-              console.log(`Temporary file ${tempFilePath} deleted successfully.`);
-            }
-          });
+        // Send the form-data request to Facebook
+        const fbResponse = await axios.post(`https://graph.facebook.com/v17.0/me/messages?access_token=${pageAccessToken}`, form, {
+          headers: {
+            ...form.getHeaders()
+          }
+        });
+
+        console.log("Message sent successfully:", fbResponse.data);
+
+        // Delete the file after the message is sent
+        fs.unlink(tempFilePath, (err) => {
+          if (err) {
+            console.error("Error deleting temporary file:", err);
+          } else {
+            console.log(`Temporary file ${tempFilePath} deleted successfully.`);
+          }
         });
 
       } else {
@@ -110,7 +115,7 @@ module.exports = {
       }
       
     } catch (error) {
-      console.error("iTunes Search Error:", error);
+      console.error("iTunes Search Error:", error.response?.data || error.message);
       sendMessage(senderId, { text: "An error occurred while fetching iTunes content. Please try again later." }, pageAccessToken);
     }
   }
