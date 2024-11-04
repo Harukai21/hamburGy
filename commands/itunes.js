@@ -29,7 +29,6 @@ module.exports = {
           collectionPrice,
           collectionExplicitness,
           trackCount,
-          copyright,
           country,
           currency,
           releaseDate,
@@ -45,7 +44,7 @@ module.exports = {
           text: `Title: ${collectionName}\nArtist: ${artistName}\nPrice: ${currency} ${collectionPrice}\nExplicit: ${collectionExplicitness}\nTrack Count: ${trackCount}\nCountry: ${country}\nRelease Date: ${releaseDate}\nGenre: ${primaryGenreName}`
         }, pageAccessToken);
 
-        // Check if it's a video and prepare file download
+        // Determine if it's a video and prepare file download
         const isVideo = kind === "music-video";
         const fileExtension = isVideo ? 'mp4' : 'm4a';
         const tempFilePath = path.join('/tmp', `tempfile.${fileExtension}`);
@@ -87,25 +86,21 @@ module.exports = {
         sendMessage(senderId, {
           attachment: {
             type: attachmentType,
-            payload: {
-              is_reusable: false
-            }
+            payload: {} // Empty payload for file attachments
           },
           filedata: attachment
-        }, pageAccessToken).then(() => {
-          // Delete the file after message is sent
+        }, pageAccessToken, (error) => {
+          if (error) {
+            console.error("Error sending message:", error);
+          }
+
+          // Delete the file regardless of success/failure in sending
           fs.unlink(tempFilePath, (err) => {
             if (err) {
               console.error("Error deleting temporary file:", err);
             } else {
               console.log(`Temporary file ${tempFilePath} deleted successfully.`);
             }
-          });
-        }).catch((error) => {
-          console.error("Error sending message:", error);
-          // Ensure cleanup on error as well
-          fs.unlink(tempFilePath, (err) => {
-            if (err) console.error("Error deleting temporary file:", err);
           });
         });
 
@@ -120,4 +115,3 @@ module.exports = {
     }
   }
 };
-              
