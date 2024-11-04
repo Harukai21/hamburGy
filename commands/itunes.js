@@ -50,6 +50,8 @@ module.exports = {
         const fileExtension = isVideo ? 'mp4' : 'm4a';
         const tempFilePath = path.join('/tmp', `tempfile.${fileExtension}`);
 
+        console.log(`Downloading preview from URL: ${previewUrl} to ${tempFilePath}`);
+
         // Download the preview file
         const mediaResponse = await axios({
           url: previewUrl,
@@ -62,13 +64,19 @@ module.exports = {
         mediaResponse.data.pipe(writer);
 
         await new Promise((resolve, reject) => {
-          writer.on('finish', resolve);
-          writer.on('error', reject);
+          writer.on('finish', () => {
+            console.log(`File downloaded successfully to ${tempFilePath}`);
+            resolve();
+          });
+          writer.on('error', (error) => {
+            console.error("Error writing file:", error);
+            reject(error);
+          });
         });
 
-        // Confirm file existence
+        // Confirm file existence after writing
         if (!fs.existsSync(tempFilePath)) {
-          console.error("File was not saved correctly");
+          console.error("File does not exist after download:", tempFilePath);
           return sendMessage(senderId, { text: "An error occurred while preparing the file. Please try again." }, pageAccessToken);
         }
 
@@ -88,6 +96,7 @@ module.exports = {
 
         // Clean up the file after sending
         fs.unlinkSync(tempFilePath);
+        console.log(`Temporary file ${tempFilePath} deleted successfully.`);
 
       } else {
         console.error(`No iTunes content found for: ${searchTerm}`);
