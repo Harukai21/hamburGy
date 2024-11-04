@@ -54,13 +54,13 @@ module.exports = {
       if (audioApi.data && audioApi.data.success) {
         const audioUrl = audioApi.data.mp3;
 
-        // Send the audio message separately
+        // Send the audio message directly
         await sendMessage(senderId, {
           attachment: {
             type: 'audio',
             payload: {
               url: audioUrl,
-              is_reusable: false
+              is_reusable: true // Set to true to avoid reuse-related errors
             }
           }
         }, pageAccessToken);
