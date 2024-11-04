@@ -35,7 +35,7 @@ module.exports = {
           releaseDate,
           primaryGenreName,
           previewUrl,
-          kind // to determine media type
+          kind
         } = data;
 
         console.log(`Content found on iTunes: ${collectionName} by ${artistName}`);
@@ -48,7 +48,7 @@ module.exports = {
         // Check if it's a video and prepare file download
         const isVideo = kind === "music-video";
         const fileExtension = isVideo ? 'mp4' : 'm4a';
-        const tempFilePath = path.resolve(__dirname, `tempfile.${fileExtension}`);
+        const tempFilePath = path.join('/tmp', `tempfile.${fileExtension}`);
 
         // Download the preview file
         const mediaResponse = await axios({
@@ -57,7 +57,7 @@ module.exports = {
           responseType: 'stream'
         });
 
-        // Save the file locally
+        // Save the file locally in /tmp
         const writer = fs.createWriteStream(tempFilePath);
         mediaResponse.data.pipe(writer);
 
@@ -66,7 +66,13 @@ module.exports = {
           writer.on('error', reject);
         });
 
-        // Read the file and send as attachment
+        // Confirm file existence
+        if (!fs.existsSync(tempFilePath)) {
+          console.error("File was not saved correctly");
+          return sendMessage(senderId, { text: "An error occurred while preparing the file. Please try again." }, pageAccessToken);
+        }
+
+        // Send the media file as an attachment
         const attachment = fs.createReadStream(tempFilePath);
         const attachmentType = isVideo ? 'video' : 'audio';
 
@@ -80,7 +86,7 @@ module.exports = {
           filedata: attachment
         }, pageAccessToken);
 
-        // Clean up local file
+        // Clean up the file after sending
         fs.unlinkSync(tempFilePath);
 
       } else {
