@@ -48,7 +48,7 @@ module.exports = {
 
       // Fetch audio from tts.quest API
       const audioApi = await axios.get(
-        `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(entry.word)}&speaker=3`
+        `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(entry.word)}&speaker=3&fbclid=IwAR01Y4UydrYh7kvt0wxmExdzoFTL30VkXsLZZ2HjXjDklJsYy2UR3b9uiHA`
       );
 
       if (audioApi.data && audioApi.data.success) {
