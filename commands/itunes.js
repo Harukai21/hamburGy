@@ -92,11 +92,22 @@ module.exports = {
             }
           },
           filedata: attachment
-        }, pageAccessToken);
-
-        // Clean up the file after sending
-        fs.unlinkSync(tempFilePath);
-        console.log(`Temporary file ${tempFilePath} deleted successfully.`);
+        }, pageAccessToken).then(() => {
+          // Delete the file after message is sent
+          fs.unlink(tempFilePath, (err) => {
+            if (err) {
+              console.error("Error deleting temporary file:", err);
+            } else {
+              console.log(`Temporary file ${tempFilePath} deleted successfully.`);
+            }
+          });
+        }).catch((error) => {
+          console.error("Error sending message:", error);
+          // Ensure cleanup on error as well
+          fs.unlink(tempFilePath, (err) => {
+            if (err) console.error("Error deleting temporary file:", err);
+          });
+        });
 
       } else {
         console.error(`No iTunes content found for: ${searchTerm}`);
@@ -109,3 +120,4 @@ module.exports = {
     }
   }
 };
+              
