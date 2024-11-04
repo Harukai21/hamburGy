@@ -43,18 +43,19 @@ module.exports = {
         message += "No meanings found.";
       }
 
+      // Send the text message first
+      await sendMessage(senderId, { text: message }, pageAccessToken);
+
       // Fetch audio from tts.quest API
       const audioApi = await axios.get(
-        `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(entry.word)}&speaker=3&fbclid=IwAR01Y4UydrYh7kvt0wxmExdzoFTL30VkXsLZZ2HjXjDklJsYy2UR3b9uiHA`
+        `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(entry.word)}&speaker=3`
       );
 
       if (audioApi.data && audioApi.data.success) {
         const audioUrl = audioApi.data.mp3;
-        message += `\n𝗔𝗨𝗗𝗜𝗢: ${audioUrl}`;
 
-        // Send the message with the audio URL
-        sendMessage(senderId, {
-          text: message,
+        // Send the audio message separately
+        await sendMessage(senderId, {
           attachment: {
             type: 'audio',
             payload: {
@@ -65,7 +66,6 @@ module.exports = {
         }, pageAccessToken);
       } else {
         console.warn("Audio generation failed, sending definition without audio.");
-        sendMessage(senderId, { text: message }, pageAccessToken);
       }
       
     } catch (error) {
