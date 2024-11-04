@@ -2,9 +2,9 @@ const axios = require('axios');
 
 module.exports = {
   name: "itunes",
-  description: "Search iTunes content and send audio as an attachment",
+  description: "Search iTunes content and send audio/video as an attachment",
   usage: "/itunes <searchTerm>",
-  author: "Biru",
+  author: "Joshua Sy",
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const searchTerm = args.join(" ");
@@ -33,6 +33,7 @@ module.exports = {
           releaseDate,
           primaryGenreName,
           previewUrl,
+          kind // can indicate the media type, e.g., "music-video" for video content
         } = data;
 
         console.log(`Content found on iTunes: ${collectionName} by ${artistName}`);
@@ -42,14 +43,13 @@ module.exports = {
           text: `Title: ${collectionName}\nArtist: ${artistName}\nPrice: ${currency} ${collectionPrice}\nExplicit: ${collectionExplicitness}\nTrack Count: ${trackCount}\nCopyright: ${copyright}\nCountry: ${country}\nRelease Date: ${releaseDate}\nGenre: ${primaryGenreName}`
         }, pageAccessToken);
 
-        // Fetch the audio preview
-        const audioResponse = await axios.get(previewUrl, { responseType: 'stream' });
-        const audioStream = audioResponse.data;
+        // Determine attachment type (audio or video)
+        const attachmentType = kind === "music-video" ? 'video' : 'audio';
 
-        // Send the audio preview as an attachment
+        // Send the media preview (audio or video) as an attachment
         sendMessage(senderId, {
           attachment: {
-            type: 'audio',
+            type: attachmentType,
             payload: {
               url: previewUrl,
               is_reusable: false
