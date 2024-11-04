@@ -43,24 +43,24 @@ module.exports = {
         message += "No meanings found.";
       }
 
-      // Send the text message first
+      // Send the text message only
       await sendMessage(senderId, { text: message }, pageAccessToken);
 
       // Fetch audio from tts.quest API
       const audioApi = await axios.get(
-        `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(entry.word)}&speaker=3&fbclid=IwAR01Y4UydrYh7kvt0wxmExdzoFTL30VkXsLZZ2HjXjDklJsYy2UR3b9uiHA`
+        `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(entry.word)}&speaker=3`
       );
 
       if (audioApi.data && audioApi.data.success) {
         const audioUrl = audioApi.data.mp3;
 
-        // Send the audio message directly
+        // Send the audio message separately, as a single attachment
         await sendMessage(senderId, {
           attachment: {
             type: 'audio',
             payload: {
               url: audioUrl,
-              is_reusable: true // Set to true to avoid reuse-related errors
+              is_reusable: true
             }
           }
         }, pageAccessToken);
