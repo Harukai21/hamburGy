@@ -1,4 +1,6 @@
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
 module.exports = {
   name: "itunes",
@@ -33,29 +35,53 @@ module.exports = {
           releaseDate,
           primaryGenreName,
           previewUrl,
-          kind // can indicate the media type, e.g., "music-video" for video content
+          kind // to determine media type
         } = data;
 
         console.log(`Content found on iTunes: ${collectionName} by ${artistName}`);
         
-        // Notify the user about the search result details
+        // Notify user with details
         sendMessage(senderId, {
-          text: `Title: ${collectionName}\nArtist: ${artistName}\nPrice: ${currency} ${collectionPrice}\nExplicit: ${collectionExplicitness}\nTrack Count: ${trackCount}\nCopyright: ${copyright}\nCountry: ${country}\nRelease Date: ${releaseDate}\nGenre: ${primaryGenreName}`
+          text: `Title: ${collectionName}\nArtist: ${artistName}\nPrice: ${currency} ${collectionPrice}\nExplicit: ${collectionExplicitness}\nTrack Count: ${trackCount}\nCountry: ${country}\nRelease Date: ${releaseDate}\nGenre: ${primaryGenreName}`
         }, pageAccessToken);
 
-        // Determine attachment type (audio or video)
-        const attachmentType = kind === "music-video" ? 'video' : 'audio';
+        // Check if it's a video and prepare file download
+        const isVideo = kind === "music-video";
+        const fileExtension = isVideo ? 'mp4' : 'm4a';
+        const tempFilePath = path.resolve(__dirname, `tempfile.${fileExtension}`);
 
-        // Send the media preview (audio or video) as an attachment
+        // Download the preview file
+        const mediaResponse = await axios({
+          url: previewUrl,
+          method: 'GET',
+          responseType: 'stream'
+        });
+
+        // Save the file locally
+        const writer = fs.createWriteStream(tempFilePath);
+        mediaResponse.data.pipe(writer);
+
+        await new Promise((resolve, reject) => {
+          writer.on('finish', resolve);
+          writer.on('error', reject);
+        });
+
+        // Read the file and send as attachment
+        const attachment = fs.createReadStream(tempFilePath);
+        const attachmentType = isVideo ? 'video' : 'audio';
+
         sendMessage(senderId, {
           attachment: {
             type: attachmentType,
             payload: {
-              url: previewUrl,
               is_reusable: false
             }
-          }
+          },
+          filedata: attachment
         }, pageAccessToken);
+
+        // Clean up local file
+        fs.unlinkSync(tempFilePath);
 
       } else {
         console.error(`No iTunes content found for: ${searchTerm}`);
