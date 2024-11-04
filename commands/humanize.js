@@ -9,6 +9,9 @@ module.exports = {
     const prompt = args.join(' ');
 
     try {
+      // Send a processing message to indicate the request is being handled
+      await sendMessage(senderId, { text: 'Humanizing your content...Pls wait.' }, pageAccessToken);
+
       // API URL to send the request
       const apiUrl = `https://vneerapi.onrender.com/humanizer?prompt=${encodeURIComponent(prompt)}&uid=${senderId}`;
       const response = await axios.get(apiUrl);
@@ -23,9 +26,10 @@ module.exports = {
       if (text.length > maxMessageLength) {
         const messages = splitMessageIntoChunks(text, maxMessageLength);
 
-        // Send each chunk in sequence
+        // Send each chunk in sequence with a slight delay
         for (const message of messages) {
           await sendMessage(senderId, { text: message }, pageAccessToken);
+          await new Promise(resolve => setTimeout(resolve, 500)); // delay between chunks for alignment
         }
       } else {
         // Send the whole response if it's under the limit
