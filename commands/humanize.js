@@ -10,11 +10,16 @@ module.exports = {
 
     try {
       // Send a processing message to indicate the request is being handled
-      await sendMessage(senderId, { text: 'Humanizing your content...Pls wait.' }, pageAccessToken);
+      await sendMessage(senderId, { text: 'Humanizing your content... Please wait.' }, pageAccessToken);
 
-      // API URL to send the request
-      const apiUrl = `https://vneerapi.onrender.com/humanizer?prompt=${encodeURIComponent(prompt)}&uid=${senderId}`;
-      const response = await axios.get(apiUrl);
+      // Set up the API URL and parameters
+      const apiUrl = `https://vneerapi.onrender.com/humanizer`;
+      const response = await axios.get(apiUrl, {
+        params: {
+          prompt: prompt,
+          uid: senderId
+        }
+      });
 
       // Extract the message from the response
       const text = response.data.message || 'No response from Humanizer Pro';
