@@ -1,5 +1,7 @@
 const axios = require('axios');
 
+const userState = {}; // Track sender's state
+
 module.exports = {
   name: 'ai',
   description: 'Handles AI responses for incoming messages, images, and documents',
@@ -7,18 +9,45 @@ module.exports = {
   usage: 'ask any questions without the command name',
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
+    if (args.length === 0) {
+      // Check if waiting for prompt after receiving an image or file
+      if (userState[senderId] && (userState[senderId].waitingForImagePrompt || userState[senderId].waitingForFilePrompt)) {
+        await sendMessage(senderId, { text: 'Please provide a message to process the received file or image.' }, pageAccessToken);
+      } else {
+        await sendMessage(senderId, { text: 'How may I assist you today?' }, pageAccessToken);
+      }
+      return;
+    }
+
     const userMessage = args ? (Array.isArray(args) ? args.join(' ') : args) : '';
     let apiUrl;
 
     try {
-      // Detect and handle image or document recognition commands
-      if (userMessage.startsWith('explain_or_answer:')) {
+      // Check if there's an image or file URL stored for processing
+      if (userState[senderId]) {
+        if (userState[senderId].waitingForImagePrompt) {
+          const imageUrl = userState[senderId].imageUrl;
+          apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&imageUrl=${encodeURIComponent(imageUrl)}&uid=${senderId}`;
+          delete userState[senderId];
+        } else if (userState[senderId].waitingForFilePrompt) {
+          const fileUrl = userState[senderId].fileUrl;
+          apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&fileUrl=${encodeURIComponent(fileUrl)}&uid=${senderId}`;
+          delete userState[senderId];
+        }
+      } else if (userMessage.startsWith('explain_or_answer:')) {
+        // Store the image URL and wait for a follow-up prompt
         const imageUrl = userMessage.replace('explain_or_answer:', '');
-        apiUrl = `https://vneerapi.onrender.com/bot?prompt=explain or answer if there's any question or activities:${encodeURIComponent(imageUrl)}&uid=${senderId}`;
+        userState[senderId] = { waitingForImagePrompt: true, imageUrl };
+        await sendMessage(senderId, { text: 'Please provide a message to explain or answer based on the image.' }, pageAccessToken);
+        return;
       } else if (userMessage.startsWith('process_file:')) {
+        // Store the file URL and wait for a follow-up prompt
         const fileUrl = userMessage.replace('process_file:', '');
-        apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(fileUrl)}&uid=${senderId}`;
+        userState[senderId] = { waitingForFilePrompt: true, fileUrl };
+        await sendMessage(senderId, { text: 'Please provide a message to process the file.' }, pageAccessToken);
+        return;
       } else {
+        // Default processing for normal text messages
         apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&uid=${senderId}`;
       }
 
@@ -40,7 +69,7 @@ module.exports = {
       const maxMessageLength = 2000;
       const messages = splitMessageIntoChunks(message, maxMessageLength);
 
-      // Send response message in chunks
+      // Send response message in chunks sequentially
       for (const chunk of messages) {
         await sendMessage(senderId, { text: chunk }, pageAccessToken);
       }
