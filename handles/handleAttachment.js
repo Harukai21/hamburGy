@@ -22,7 +22,10 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN, command = "default") {
   const senderId = event.sender.id;
   const attachments = event.message.attachments;
 
-  const imageUrls = [];
+  // Initialize imageUrls array in userState if not already set
+  if (!userState[senderId]) {
+    userState[senderId] = { waitingForImagePrompt: false, imageUrls: [] };
+  }
 
   for (const attachment of attachments) {
     switch (attachment.type) {
@@ -35,7 +38,8 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN, command = "default") {
           break; // Skip processing this image
         }
 
-        imageUrls.push(imageUrl);
+        userState[senderId].imageUrls.push(imageUrl); // Store the image URL
+        userState[senderId].waitingForImagePrompt = true; // Set flag to wait for user prompt
         break;
 
       case 'video':
@@ -68,12 +72,9 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN, command = "default") {
     }
   }
 
-  if (imageUrls.length > 0) {
+  if (userState[senderId].imageUrls.length > 0) {
     await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_on');
-
-    userState[senderId] = { waitingForImagePrompt: true, imageUrls };
     await sendMessage(senderId, { text: 'Please provide a prompt to process the received image(s).' }, PAGE_ACCESS_TOKEN);
-
     await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_off');
   }
 }
