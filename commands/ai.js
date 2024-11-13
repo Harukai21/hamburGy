@@ -12,7 +12,6 @@ module.exports = {
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const userMessage = Array.isArray(args) ? args.join(' ') : args;
 
-    // Check if a prompt is provided without any previous image or file awaiting processing
     if (!userMessage && !(userState[senderId]?.waitingForImagePrompt || userState[senderId]?.waitingForFilePrompt)) {
       await sendMessage(senderId, { text: 'How may I assist you today?' }, pageAccessToken);
       return;
@@ -21,24 +20,21 @@ module.exports = {
     let apiUrl;
 
     try {
-      // If images are awaiting processing, use them with the follow-up prompt
-      if (userState[senderId]?.waitingForImagePrompt && userMessage) {
-        const imageUrls = userState[senderId].imageUrls;
-        apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&imageUrls=${encodeURIComponent(JSON.stringify(imageUrls))}&uid=${senderId}`;
-        
-        // Clear the stored state after processing
-        delete userState[senderId];
+      // Check if there's an image or file URL stored, waiting for processing
+      if (userState[senderId]) {
+        if (userState[senderId].waitingForImagePrompt && userMessage) {
+          const imageUrls = userState[senderId].imageUrls;
+          apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&imageUrls=${encodeURIComponent(JSON.stringify(imageUrls))}&uid=${senderId}`;
+          delete userState[senderId]; // Clear state after processing
+        } else if (userState[senderId].waitingForFilePrompt && userMessage) {
+          const fileUrl = userState[senderId].fileUrl;
+          apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&fileUrl=${encodeURIComponent(fileUrl)}&uid=${senderId}`;
+          delete userState[senderId]; // Clear state after processing
+        }
       }
-      // If a file is awaiting processing, handle it
-      else if (userState[senderId]?.waitingForFilePrompt && userMessage) {
-        const fileUrl = userState[senderId].fileUrl;
-        apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&fileUrl=${encodeURIComponent(fileUrl)}&uid=${senderId}`;
-        
-        // Clear the stored state after processing
-        delete userState[senderId];
-      }
-      // Handle standard text messages if no image or file is awaiting processing
-      else if (!apiUrl) {
+
+      // If no image or file is awaiting processing, handle standard text messages
+      if (!apiUrl) {
         apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&uid=${senderId}`;
       }
 
