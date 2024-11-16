@@ -28,7 +28,7 @@ module.exports = {
       }],
       "id": "SVNaDhsdI_FlPHGFGlDyB",
       "previewToken": null,
-      "userId": null,
+      "userId": "8099248330189716",
       "codeModelMode": true,
       "agentMode": {
         "mode": true,
