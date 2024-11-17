@@ -2,7 +2,7 @@ const axios = require('axios');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs-extra');
 const path = require('path');
-const FormData = require('form-data'); // Import form-data library
+const FormData = require('form-data');
 
 module.exports = {
   name: 'spotify',
@@ -20,10 +20,7 @@ module.exports = {
       const response = await axios.get(apiUrl);
 
       // Extract song information
-      const trackName = response.data.track;
-      const artistName = response.data.artist;
-      const spotifyLink = response.data.spotify_url;
-      const downloadLink = response.data.download_link;
+      const { track: trackName, artist: artistName, spotify_url: spotifyLink, download_link: downloadLink } = response.data;
 
       if (!downloadLink) {
         sendMessage(
@@ -37,13 +34,11 @@ module.exports = {
       // Ensure temporary directory exists
       await fs.ensureDir(tempDir);
 
-      // Download and process the audio file using FFmpeg
+      // Download and process the audio file
       const inputFilePath = path.join(tempDir, `${Date.now()}_input.mp3`);
       const writer = fs.createWriteStream(inputFilePath);
 
-      const downloadResponse = await axios.get(downloadLink, {
-        responseType: 'stream',
-      });
+      const downloadResponse = await axios.get(downloadLink, { responseType: 'stream' });
       downloadResponse.data.pipe(writer);
 
       await new Promise((resolve, reject) => {
@@ -51,22 +46,22 @@ module.exports = {
         writer.on('error', reject);
       });
 
-      // Convert the audio file using FFmpeg (if needed)
+      // Convert the audio file using FFmpeg
       await new Promise((resolve, reject) => {
         ffmpeg(inputFilePath)
-          .audioCodec('libmp3lame') // Ensure MP3 encoding
+          .audioCodec('libmp3lame')
           .on('end', resolve)
           .on('error', reject)
           .save(outputFilePath);
       });
 
       // Upload the processed file as a Facebook attachment
-      const attachmentUploadUrl = `https://graph.facebook.com/v12.0/me/message_attachments?access_token=${pageAccessToken}`;
+      const attachmentUploadUrl = `https://graph.facebook.com/v20.0/me/message_attachments?access_token=${pageAccessToken}`;
       const formData = new FormData();
       formData.append('filedata', fs.createReadStream(outputFilePath));
 
       const attachmentResponse = await axios.post(attachmentUploadUrl, formData, {
-        headers: formData.getHeaders(), // Correctly set headers using FormData
+        headers: formData.getHeaders(),
       });
 
       const attachmentId = attachmentResponse.data.attachment_id;
@@ -75,18 +70,15 @@ module.exports = {
       sendMessage(
         senderId,
         {
-          attachment: {
-            type: 'audio',
-            payload: {
-              attachment_id: attachmentId,
+          message: {
+            attachment: {
+              type: 'audio',
+              payload: { attachment_id: attachmentId },
             },
           },
         },
         pageAccessToken
       );
-
-      // Cleanup temporary files
-      await fs.remove(tempDir);
 
       // Send confirmation about the song
       sendMessage(
@@ -97,15 +89,22 @@ module.exports = {
         pageAccessToken
       );
     } catch (error) {
-      console.error('Error processing Spotify song:', error);
+      // Log critical errors
+      console.error('Critical Error:', error.message || error.response?.data || error);
+
+      // Notify the user about the error
       sendMessage(
         senderId,
         { text: 'Sorry, there was an error processing your request.' },
         pageAccessToken
       );
     } finally {
-      // Cleanup temp files in case of an error
-      await fs.remove(tempDir);
+      // Cleanup temporary files
+      try {
+        await fs.remove(tempDir);
+      } catch (cleanupError) {
+        console.error('Cleanup Error:', cleanupError.message || cleanupError);
+      }
     }
   },
 };
