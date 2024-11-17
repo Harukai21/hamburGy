@@ -12,34 +12,47 @@ module.exports = {
       const apiUrl = `https://vneerapi.onrender.com/spotify?song=${encodeURIComponent(query)}`;
       const response = await axios.get(apiUrl);
 
-      // Extract song information from the response
-      const message = response.data.message;
       const trackName = response.data.track;
       const artistName = response.data.artist;
       const spotifyLink = response.data.spotify_url;
       const downloadLink = response.data.download_link;
 
       if (downloadLink) {
-        // Send a message with the song's name, artist, and Spotify URL
-        sendMessage(senderId, {
-          text: `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}\n🔗 Spotify: ${spotifyLink}`
-        }, pageAccessToken);
+        // Upload the file to Facebook as an attachment
+        const attachmentUploadUrl = `https://graph.facebook.com/v20.0/me/message_attachments?access_token=${pageAccessToken}`;
+        const attachmentResponse = await axios.post(attachmentUploadUrl, {
+          message: {
+            attachment: {
+              type: 'audio',
+              payload: {
+                url: downloadLink,
+                is_reusable: true,
+              },
+            },
+          },
+        });
 
-        // Send the MP3 file as an attachment
+        const attachmentId = attachmentResponse.data.attachment_id;
+
+        // Send the uploaded attachment as a message
         sendMessage(senderId, {
           attachment: {
             type: 'audio',
             payload: {
-              url: downloadLink,
-              is_reusable: true
-            }
-          }
+              attachment_id: attachmentId,
+            },
+          },
+        }, pageAccessToken);
+        
+        // Send additional information
+        sendMessage(senderId, {
+          text: `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}\n🔗 Spotify: ${spotifyLink}`
         }, pageAccessToken);
       } else {
         sendMessage(senderId, { text: 'Sorry, no download link found for that song.' }, pageAccessToken);
       }
     } catch (error) {
-      console.error('Error retrieving Spotify link:', error);
+      console.error('Error sending audio attachment:', error.response ? error.response.data : error);
       sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
     }
   }
