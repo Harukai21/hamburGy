@@ -15,14 +15,31 @@ module.exports = {
       const { track: trackName, artist: artistName, spotify_url: spotifyLink, download_link: downloadLink } = response.data;
 
       if (downloadLink) {
-        // Validate the downloadLink
-        const isUrlValid = await axios
+        // Resolve the final URL and ensure it's accessible
+        const resolvedUrl = await axios
           .head(downloadLink)
-          .then(() => true)
-          .catch(() => false);
+          .then(res => res.request.res.responseUrl)
+          .catch(err => {
+            console.error('Error resolving URL:', err);
+            return null;
+          });
 
-        if (!isUrlValid) {
+        if (!resolvedUrl) {
           sendMessage(senderId, { text: 'Sorry, the download link is not accessible.' }, pageAccessToken);
+          return;
+        }
+
+        // Check content type for compatibility
+        const contentType = await axios
+          .head(resolvedUrl)
+          .then(res => res.headers['content-type'])
+          .catch(err => {
+            console.error('Error fetching content type:', err);
+            return null;
+          });
+
+        if (!contentType || !contentType.startsWith('audio')) {
+          sendMessage(senderId, { text: 'Sorry, the provided link is not a valid audio file.' }, pageAccessToken);
           return;
         }
 
@@ -33,7 +50,7 @@ module.exports = {
             attachment: {
               type: 'audio',
               payload: {
-                url: downloadLink,
+                url: resolvedUrl,
                 is_reusable: true,
               },
             },
