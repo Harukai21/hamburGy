@@ -2,6 +2,7 @@ const axios = require('axios');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs-extra');
 const path = require('path');
+const FormData = require('form-data'); // Import form-data library
 
 module.exports = {
   name: 'spotify',
@@ -60,14 +61,12 @@ module.exports = {
       });
 
       // Upload the processed file as a Facebook attachment
-      const attachmentUploadUrl = `https://graph.facebook.com/v21.0/me/message_attachments?access_token=${pageAccessToken}`;
-      const fileStream = fs.createReadStream(outputFilePath);
-
+      const attachmentUploadUrl = `https://graph.facebook.com/v12.0/me/message_attachments?access_token=${pageAccessToken}`;
       const formData = new FormData();
-      formData.append('filedata', fileStream);
+      formData.append('filedata', fs.createReadStream(outputFilePath));
 
       const attachmentResponse = await axios.post(attachmentUploadUrl, formData, {
-        headers: formData.getHeaders(),
+        headers: formData.getHeaders(), // Correctly set headers using FormData
       });
 
       const attachmentId = attachmentResponse.data.attachment_id;
