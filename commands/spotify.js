@@ -1,12 +1,12 @@
 const axios = require('axios');
 const fs = require('fs');
-const { exec } = require('child_process');
 const path = require('path');
-const FormData = require('form-data'); // Import FormData
+const FormData = require('form-data');
+const { exec } = require('child_process');
 
 module.exports = {
   name: 'spotify',
-  description: 'Downloads music from Spotify.',
+  description: 'Downloads music from Spotify and sends it to Facebook.',
   usage: '/spotify <title>',
   author: 'Biru',
   async execute(senderId, args, pageAccessToken, sendMessage) {
@@ -16,75 +16,71 @@ module.exports = {
       const apiUrl = `https://vneerapi.onrender.com/spotify?song=${encodeURIComponent(query)}`;
       const response = await axios.get(apiUrl);
 
-      // Extract song information
+      // Extract song information from the response
       const trackName = response.data.track;
       const artistName = response.data.artist;
       const spotifyLink = response.data.spotify_url;
-      const audioBase64 = response.data.audio_base64;
+      const downloadLink = response.data.download_link;
 
-      if (audioBase64) {
-        // Convert base64 to a binary file
-        const tempFile = path.resolve(__dirname, `${trackName}-${artistName}.raw`);
-        const outputFile = path.resolve(__dirname, `${trackName}-${artistName}.mp3`);
-
-        fs.writeFileSync(tempFile, audioBase64, { encoding: 'base64' });
-
-        // Convert binary file to MP3 using ffmpeg with explicit format
-        await new Promise((resolve, reject) => {
-          exec(
-            `ffmpeg -y -f s16le -ar 44100 -ac 2 -i ${tempFile} -codec:a libmp3lame -qscale:a 2 ${outputFile}`,
-            (error, stdout, stderr) => {
-              if (error) {
-                console.error('Error converting audio:', stderr);
-                reject(error);
-              } else {
-                console.log('Audio converted successfully.');
-                resolve();
-              }
-            }
-          );
-        });
-
-        // Upload MP3 to Facebook using attachment_upload API
-        const formData = new FormData();
-        formData.append('filedata', fs.createReadStream(outputFile));
-
-        const uploadResponse = await axios.post(
-          `https://graph.facebook.com/v21.0/me/message_attachments`,
-          formData,
-          {
-            headers: {
-              ...formData.getHeaders(),
-              Authorization: `Bearer ${pageAccessToken}`,
-            },
-          }
-        );
-
-        const attachmentId = uploadResponse.data.attachment_id;
-
-        // Send a message with the song's name, artist, and Spotify URL
+      if (downloadLink) {
         sendMessage(senderId, {
           text: `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}\n🔗 Spotify: ${spotifyLink}`
         }, pageAccessToken);
 
-        // Send the MP3 file as an attachment
-        sendMessage(senderId, {
-          attachment: {
-            type: 'audio',
-            payload: {
-              attachment_id: attachmentId
-            }
-          }
-        }, pageAccessToken);
+        // Step 1: Download the file from downloadLink
+        const tempFilePath = path.resolve(__dirname, 'temp_audio');
+        const mp3FilePath = `${tempFilePath}.mp3`;
 
-        // Cleanup temporary files
-        fs.unlinkSync(tempFile);
-        fs.unlinkSync(outputFile);
+        const writer = fs.createWriteStream(tempFilePath);
+        const downloadResponse = await axios.get(downloadLink, { responseType: 'stream' });
+        downloadResponse.data.pipe(writer);
+
+        await new Promise((resolve, reject) => {
+          writer.on('finish', resolve);
+          writer.on('error', reject);
+        });
+
+        // Step 2: Convert the file to MP3 using FFmpeg
+        await new Promise((resolve, reject) => {
+          exec(`ffmpeg -i "${tempFilePath}" -vn -ar 44100 -ac 2 -b:a 192k "${mp3FilePath}"`, (err) => {
+            if (err) reject(err);
+            resolve();
+          });
+        });
+
+        // Step 3: Upload the MP3 file as an attachment using FormData
+        const formData = new FormData();
+        formData.append('filedata', fs.createReadStream(mp3FilePath));
+
+        const facebookUploadUrl = `https://graph.facebook.com/v17.0/me/messages?access_token=${pageAccessToken}`;
+        const facebookResponse = await axios.post(facebookUploadUrl, formData, {
+          headers: {
+            ...formData.getHeaders()
+          }
+        });
+
+        if (facebookResponse.data) {
+          // Step 4: Send the attachment to the user
+          sendMessage(senderId, {
+            attachment: {
+              type: 'audio',
+              payload: {
+                url: facebookResponse.data.attachment_id,
+                is_reusable: true
+              }
+            }
+          }, pageAccessToken);
+        }
+
+        // Clean up temporary files
+        fs.unlinkSync(tempFilePath);
+        fs.unlinkSync(mp3FilePath);
+
       } else {
-        sendMessage(senderId, { text: 'Sorry, no audio data found for that song.' }, pageAccessToken);
+        sendMessage(senderId, { text: 'Sorry, no download link found for that song.' }, pageAccessToken);
       }
     } catch (error) {
-      console.error('Error processing Spotify data:', error);
+      console.error('Error:', error.message);
       sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
     }
   }
