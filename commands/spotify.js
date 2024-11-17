@@ -2,25 +2,27 @@ const axios = require('axios');
 
 module.exports = {
   name: 'spotify',
-  description: 'downloads music from spotify.',
+  description: 'Downloads music from Spotify.',
   usage: '/spotify <title>',
   author: 'Biru',
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const query = args.join(' ');
 
     try {
-      const apiUrl = `https://deku-rest-apis.ooguy.com/spotify?q=${encodeURIComponent(query)}`;
+      const apiUrl = `https://vneerapi.onrender.com/spotify?song=${encodeURIComponent(query)}`;
       const response = await axios.get(apiUrl);
 
       // Extract song information from the response
-      const trackName = response.data.track.name;
-      const artistName = response.data.track.artist;
-      const spotifyLink = response.data.track.downloadLink;
+      const message = response.data.message;
+      const trackName = response.data.track;
+      const artistName = response.data.artist;
+      const spotifyLink = response.data.spotify_url;
+      const downloadLink = response.data.download_link;
 
-      if (spotifyLink) {
-        // Send a message with the song's name, artist, and MP3 file
+      if (downloadLink) {
+        // Send a message with the song's name, artist, and Spotify URL
         sendMessage(senderId, {
-          text: `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}`
+          text: `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}\n🔗 Spotify: ${spotifyLink}`
         }, pageAccessToken);
 
         // Send the MP3 file as an attachment
@@ -28,13 +30,13 @@ module.exports = {
           attachment: {
             type: 'audio',
             payload: {
-              url: spotifyLink,
+              url: downloadLink,
               is_reusable: true
             }
           }
         }, pageAccessToken);
       } else {
-        sendMessage(senderId, { text: 'Sorry, no Spotify link found for that query.' }, pageAccessToken);
+        sendMessage(senderId, { text: 'Sorry, no download link found for that song.' }, pageAccessToken);
       }
     } catch (error) {
       console.error('Error retrieving Spotify link:', error);
