@@ -30,7 +30,7 @@ module.exports = {
         );
 
         // Construct the attachment payload for file upload
-        const attachmentUploadUrl = `https://graph.facebook.com/v12.0/me/message_attachments?access_token=${pageAccessToken}`;
+        const attachmentUploadUrl = `https://graph.facebook.com/v21.0/me/message_attachments?access_token=${pageAccessToken}`;
         const attachmentPayload = {
           message: {
             attachment: {
