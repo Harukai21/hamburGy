@@ -16,7 +16,7 @@ module.exports = {
     const outputFilePath = path.join(tempDir, outputFileName);
 
     try {
-      // Fetch song data from the API
+      // Fetch song data
       const apiUrl = `https://vneerapi.onrender.com/spotify?song=${encodeURIComponent(query)}`;
       const response = await axios.get(apiUrl);
       const { track: trackName, artist: artistName, spotify_url: spotifyLink, download_link: downloadLink } = response.data;
@@ -26,15 +26,15 @@ module.exports = {
         return;
       }
 
-      // Send initial message about the song
+      // Send song details
       sendMessage(senderId, {
         text: `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}\n🔗 Spotify: ${spotifyLink}`
       }, pageAccessToken);
 
-      // Ensure temp directory exists
+      // Ensure temp directory
       await fs.ensureDir(tempDir);
 
-      // Download audio file
+      // Download the audio file
       const inputFilePath = path.join(tempDir, `${Date.now()}_input.mp3`);
       const writer = fs.createWriteStream(inputFilePath);
       const downloadResponse = await axios.get(downloadLink, { responseType: 'stream' });
@@ -45,7 +45,7 @@ module.exports = {
         writer.on('error', reject);
       });
 
-      // Convert audio using FFmpeg
+      // Convert using FFmpeg
       await new Promise((resolve, reject) => {
         ffmpeg(inputFilePath)
           .audioCodec('libmp3lame')
@@ -54,7 +54,7 @@ module.exports = {
           .save(outputFilePath);
       });
 
-      // Upload file as a Facebook attachment
+      // Upload the file as a Facebook attachment
       const formData = new FormData();
       formData.append('filedata', fs.createReadStream(outputFilePath));
 
@@ -63,19 +63,21 @@ module.exports = {
         headers: formData.getHeaders(),
       });
 
+      if (!attachmentResponse.data || !attachmentResponse.data.attachment_id) {
+        throw new Error('Attachment upload failed. No attachment_id received.');
+      }
+
       const attachmentId = attachmentResponse.data.attachment_id;
 
-      // Send the uploaded file as an audio attachment
+      // Send the audio file
       sendMessage(senderId, {
         attachment: {
           type: 'audio',
-          payload: {
-            attachment_id: attachmentId,
-          },
+          payload: { attachment_id: attachmentId },
         },
       }, pageAccessToken);
     } catch (error) {
-      console.error('Critical Error:', error.message || error.response?.data || error);
+      console.error('Critical Error:', error.response?.data || error.message || error);
       sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
     } finally {
       // Cleanup temp files
