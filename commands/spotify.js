@@ -12,82 +12,79 @@ module.exports = {
       const apiUrl = `https://vneerapi.onrender.com/spotify?song=${encodeURIComponent(query)}`;
       const response = await axios.get(apiUrl);
 
-      const { track: trackName, artist: artistName, spotify_url: spotifyLink, download_link: downloadLink } = response.data;
+      // Extract song information from the response
+      const message = response.data.message;
+      const trackName = response.data.track;
+      const artistName = response.data.artist;
+      const spotifyLink = response.data.spotify_url;
+      const downloadLink = response.data.download_link;
 
       if (downloadLink) {
-        // Resolve the final URL and ensure it's accessible
-        const resolvedUrl = await axios
-          .head(downloadLink)
-          .then(res => res.request.res.responseUrl)
-          .catch(err => {
-            console.error('Error resolving URL:', err);
-            return null;
-          });
+        // Send a message with the song's name, artist, and Spotify URL
+        sendMessage(
+          senderId,
+          {
+            text: `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}\n🔗 Spotify: ${spotifyLink}`
+          },
+          pageAccessToken
+        );
 
-        if (!resolvedUrl) {
-          sendMessage(senderId, { text: 'Sorry, the download link is not accessible.' }, pageAccessToken);
-          return;
-        }
-
-        // Check content type for compatibility
-        const contentType = await axios
-          .head(resolvedUrl)
-          .then(res => res.headers['content-type'])
-          .catch(err => {
-            console.error('Error fetching content type:', err);
-            return null;
-          });
-
-        if (!contentType || !contentType.startsWith('audio')) {
-          sendMessage(senderId, { text: 'Sorry, the provided link is not a valid audio file.' }, pageAccessToken);
-          return;
-        }
-
-        // Upload the file to Facebook as an attachment
-        const attachmentUploadUrl = `https://graph.facebook.com/v20.0/me/message_attachments?access_token=${pageAccessToken}`;
+        // Construct the attachment payload for file upload
+        const attachmentUploadUrl = `https://graph.facebook.com/v12.0/me/message_attachments?access_token=${pageAccessToken}`;
         const attachmentPayload = {
           message: {
             attachment: {
               type: 'audio',
               payload: {
-                url: resolvedUrl,
-                is_reusable: true,
-              },
-            },
+                url: downloadLink,
+                is_reusable: true
+              }
+            }
           },
+          headers: {
+            'Content-Type': 'audio/mpeg' // Force MIME type
+          }
         };
 
-        const attachmentResponse = await axios.post(attachmentUploadUrl, attachmentPayload);
-        const attachmentId = attachmentResponse.data.attachment_id;
+        try {
+          const attachmentResponse = await axios.post(attachmentUploadUrl, attachmentPayload);
+          const attachmentId = attachmentResponse.data.attachment_id;
 
-        // Send the uploaded attachment as a message
-        await sendMessage(
-          senderId,
-          {
-            attachment: {
-              type: 'audio',
-              payload: {
-                attachment_id: attachmentId,
-              },
+          // Send the uploaded MP3 file as a reusable attachment
+          sendMessage(
+            senderId,
+            {
+              attachment: {
+                type: 'audio',
+                payload: {
+                  attachment_id: attachmentId
+                }
+              }
             },
-          },
-          pageAccessToken
-        );
-
-        // Send additional information
-        await sendMessage(
-          senderId,
-          {
-            text: `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}\n🔗 Spotify: ${spotifyLink}`,
-          },
-          pageAccessToken
-        );
+            pageAccessToken
+          );
+        } catch (attachmentError) {
+          console.error('Error uploading audio attachment:', attachmentError);
+          sendMessage(
+            senderId,
+            { text: 'Sorry, there was an error uploading the audio file.' },
+            pageAccessToken
+          );
+        }
       } else {
-        sendMessage(senderId, { text: 'Sorry, no download link found for that song.' }, pageAccessToken);
+        sendMessage(
+          senderId,
+          { text: 'Sorry, no download link found for that song.' },
+          pageAccessToken
+        );
       }
     } catch (error) {
-      console.error('Error sending audio attachment:', error.response ? error.response.data : error);
-      sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
+      console.error('Error retrieving Spotify link:', error);
+      sendMessage(
+        senderId,
+        { text: 'Sorry, there was an error processing your request.' },
+        pageAccessToken
+      );
     }
-  },
+  }
 };
