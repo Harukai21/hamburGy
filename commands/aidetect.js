@@ -23,37 +23,15 @@ module.exports = {
       const apiUrl = `https://vneerapi.onrender.com/aidetect?text=${encodeURIComponent(inputText)}`;
       const response = await axios.get(apiUrl);
 
-      // Extract the cleaned result from the response
-      const cleanedResult = response.data.cleaned_result?.message || 'No response from AI Detector';
+      // Extract the required part of the cleaned result
+      const result = response.data.cleaned_result?.message || 'No response from AI Detector';
+      const relevantPart = result.split('\n').filter(line => line.startsWith('Reading Ease:') || line.includes('likely to be written'))?.join('\n') || result;
 
-      // Limit of message per chunk is 2000 characters
-      const maxMessageLength = 2000;
-
-      // Split the response into chunks if it exceeds 2000 characters
-      if (cleanedResult.length > maxMessageLength) {
-        const messages = splitMessageIntoChunks(cleanedResult, maxMessageLength);
-
-        // Send each chunk in sequence with a slight delay
-        for (const message of messages) {
-          await sendMessage(senderId, { text: message }, pageAccessToken);
-          await new Promise(resolve => setTimeout(resolve, 500)); // delay between chunks for alignment
-        }
-      } else {
-        // Send the whole response if it's under the limit
-        await sendMessage(senderId, { text: cleanedResult }, pageAccessToken);
-      }
+      // Send the relevant part of the result
+      await sendMessage(senderId, { text: relevantPart }, pageAccessToken);
     } catch (error) {
       console.error('Error calling AI Detector API:', error);
       await sendMessage(senderId, { text: 'An error occurred. Please try again later.' }, pageAccessToken);
     }
   }
 };
-
-// Helper function to split message into chunks
-function splitMessageIntoChunks(message, chunkSize) {
-  const chunks = [];
-  for (let i = 0; i < message.length; i += chunkSize) {
-    chunks.push(message.slice(i, i + chunkSize));
-  }
-  return chunks;
-}
