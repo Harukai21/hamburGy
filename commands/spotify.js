@@ -52,7 +52,11 @@ module.exports = {
       }
     } catch (error) {
       console.error('Error retrieving Spotify link:', error);
-      sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
+
+      // Inform the user about the error
+      sendMessage(senderId, {
+        text: 'Sorry, there was an error processing your request. Please try again later.'
+      }, pageAccessToken);
     }
   }
 };
