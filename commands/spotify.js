@@ -7,56 +7,65 @@ module.exports = {
   author: 'Biru',
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const query = args.join(' ');
+    console.log(`Received Spotify request for query: "${query}"`);
 
     try {
       const apiUrl = `https://vneerapi.onrender.com/spotify2?song=${encodeURIComponent(query)}`;
+      console.log(`Requesting API: ${apiUrl}`);
       const response = await axios.get(apiUrl);
 
-      // Extract song information from the response
-      const message = response.data.message;
-      const trackName = response.data.metadata.name;
-      const artistName = response.data.metadata.artist;
-      const spotifyLink = response.data.metadata.url;
-      const coverUrl = response.data.metadata.cover_url;
-      const fileUrl = response.data.download.file_url;
+      // Log the full API response for debugging
+      console.log('API Response:', response.data);
 
-      if (fileUrl) {
-        // Step 1: Send the text message
-        sendMessage(senderId, {
-          text: `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}\n🔗 Spotify: ${spotifyLink}\n🔗 Download: ${fileUrl}`
-        }, pageAccessToken);
+      const {
+        message,
+        metadata: { name: trackName, artist: artistName, album, releaseDate, url: spotifyLink, cover_url: coverUrl },
+        download: { download: { file_url: fileUrl } },
+      } = response.data;
 
-        // Step 2: Send the cover image
+      console.log(`Parsed data: Track: ${trackName}, Artist: ${artistName}, File URL: ${fileUrl}, Cover URL: ${coverUrl}`);
+
+      // Send the text message
+      sendMessage(senderId, {
+        text: `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}\n💿 Album: ${album}\n📅 Release Date: ${releaseDate}\n🔗 Spotify: ${spotifyLink}`
+      }, pageAccessToken);
+      console.log('Sent text message.');
+
+      // Send the image cover
+      if (coverUrl) {
         sendMessage(senderId, {
           attachment: {
             type: 'image',
             payload: {
-              url: coverUrl, // Send the cover image URL
+              url: coverUrl,
               is_reusable: true
             }
           }
         }, pageAccessToken);
+        console.log('Sent cover image.');
+      } else {
+        console.warn('No cover image URL available.');
+      }
 
-        // Step 3: Send the audio file
+      // Send the audio file
+      if (fileUrl) {
         sendMessage(senderId, {
           attachment: {
             type: 'audio',
             payload: {
-              url: fileUrl, // Send file_url as the audio attachment
+              url: fileUrl,
               is_reusable: true
             }
           }
         }, pageAccessToken);
+        console.log('Sent audio file.');
       } else {
-        sendMessage(senderId, { text: 'Sorry, no audio file found for that song.' }, pageAccessToken);
+        console.warn('No audio file URL available.');
       }
-    } catch (error) {
-      console.error('Error retrieving Spotify link:', error);
 
-      // Inform the user about the error
-      sendMessage(senderId, {
-        text: 'Sorry, there was an error processing your request. Please try again later.'
-      }, pageAccessToken);
+    } catch (error) {
+      console.error('Error retrieving Spotify link or sending messages:', error.message);
+      sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
     }
   }
 };
