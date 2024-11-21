@@ -39,7 +39,7 @@ module.exports = {
         `Words: ${wordCount}\n` +
         `AI written: ${fakeProbability}%\n` +
         `Human written: ${realProbability}%\n` +
-        `Your content is ${fakeProbability}% AI written and ${realProbability}% human written.`;
+        `Result:\nYour content is ${fakeProbability}% Ai written and ${realProbability}% Human written.`;
 
       // Send the formatted response
       await sendMessage(senderId, { text: formattedResponse }, pageAccessToken);
