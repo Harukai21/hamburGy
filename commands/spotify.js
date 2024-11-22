@@ -14,9 +14,6 @@ module.exports = {
       console.log(`Requesting API: ${apiUrl}`);
       const response = await axios.get(apiUrl);
 
-      // Log the full API response for debugging
-      console.log('API Response:', response.data);
-
       const {
         message = 'No metadata found',
         metadata: {
@@ -36,7 +33,7 @@ module.exports = {
         } = {}
       } = response.data;
 
-      console.log(`Parsed data: Track: ${trackName}, Artist: ${artistName}, File URL: ${fileUrl}, Preview URL: ${previewUrl}, Audio Base64: ${audioBase64}`);
+      console.log(`Parsed data: Track: ${trackName}, Artist: ${artistName}`);
 
       // Send the image and interactive buttons
       if (coverUrl || fileUrl) {
@@ -79,50 +76,49 @@ module.exports = {
       }
 
       // Retry logic for sending audio attachments
-      const sendAudioWithRetry = async (url, isBase64 = false, maxRetries = 3) => {
+      const sendAudioWithRetry = async (audioPayload, maxRetries = 3) => {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
-            console.log(`Attempt ${attempt}: Sending audio (${isBase64 ? 'Base64' : 'URL'})...`);
-            const payload = isBase64
-              ? { audio_base64: url, is_reusable: true }
-              : { url, is_reusable: true };
-
+            console.log(`Attempt ${attempt}: Sending audio...`);
             await sendMessage(senderId, {
               attachment: {
                 type: 'audio',
-                payload
+                payload: audioPayload
               }
             }, pageAccessToken);
-
             console.log('Audio sent successfully.');
             return true; // Exit on success
           } catch (error) {
             console.error(`Attempt ${attempt} failed: ${error.message}`);
             if (attempt === maxRetries) {
-              console.warn('Max retries reached. Moving to the next fallback.');
+              console.error('Max retry attempts reached.');
+              return false; // Exit after final failure
             }
           }
         }
-        return false; // Indicate failure after retries
       };
 
-      // Attempt to send audio with fallbacks
       let audioSent = false;
 
-      if (fileUrl) {
-        audioSent = await sendAudioWithRetry(fileUrl);
+      // Try sending `audio_base64` first
+      if (audioBase64) {
+        console.log('Trying to send audio_base64...');
+        audioSent = await sendAudioWithRetry({ audio_base64: audioBase64 });
       }
 
-      if (!audioSent && audioBase64) {
-        console.log('File URL failed. Attempting to send audio_base64...');
-        audioSent = await sendAudioWithRetry(audioBase64, true);
+      // If `audio_base64` fails, try `file_url`
+      if (!audioSent && fileUrl) {
+        console.log('audio_base64 failed. Trying to send file_url...');
+        audioSent = await sendAudioWithRetry({ url: fileUrl, is_reusable: true });
       }
 
+      // If both fail, try `preview_url`
       if (!audioSent && previewUrl) {
-        console.log('Audio Base64 failed. Attempting to send preview_url...');
-        audioSent = await sendAudioWithRetry(previewUrl);
+        console.log('Both audio_base64 and file_url failed. Trying preview_url...');
+        audioSent = await sendAudioWithRetry({ url: previewUrl, is_reusable: true });
       }
 
+      // Fallback message if all audio attempts fail
       if (!audioSent) {
         console.warn('All audio sending attempts failed.');
         await sendMessage(senderId, { text: 'Sorry, we couldn’t send the audio file.' }, pageAccessToken);
