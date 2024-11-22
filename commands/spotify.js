@@ -27,8 +27,7 @@ module.exports = {
         } = {},
         download: {
           download: { 
-            file_url: fileUrl = null,
-            audio_base64: audioBase64 = null 
+            file_url: fileUrl = null
           } = {}
         } = {}
       } = response.data;
@@ -76,14 +75,14 @@ module.exports = {
       }
 
       // Retry logic for sending audio attachments
-      const sendAudioWithRetry = async (audioPayload, maxRetries = 3) => {
+      const sendAudioWithRetry = async (audioUrl, maxRetries = 3) => {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
             console.log(`Attempt ${attempt}: Sending audio...`);
             await sendMessage(senderId, {
               attachment: {
                 type: 'audio',
-                payload: audioPayload
+                payload: { url: audioUrl, is_reusable: true }
               }
             }, pageAccessToken);
             console.log('Audio sent successfully.');
@@ -100,22 +99,16 @@ module.exports = {
 
       let audioSent = false;
 
-      // Try sending `audio_base64` first
-      if (audioBase64) {
-        console.log('Trying to send audio_base64...');
-        audioSent = await sendAudioWithRetry({ audio_base64: audioBase64 });
+      // Try sending `file_url` first
+      if (fileUrl) {
+        console.log('Trying to send file_url...');
+        audioSent = await sendAudioWithRetry(fileUrl);
       }
 
-      // If `audio_base64` fails, try `file_url`
-      if (!audioSent && fileUrl) {
-        console.log('audio_base64 failed. Trying to send file_url...');
-        audioSent = await sendAudioWithRetry({ url: fileUrl, is_reusable: true });
-      }
-
-      // If both fail, try `preview_url`
+      // If `file_url` fails, try `preview_url`
       if (!audioSent && previewUrl) {
-        console.log('Both audio_base64 and file_url failed. Trying preview_url...');
-        audioSent = await sendAudioWithRetry({ url: previewUrl, is_reusable: true });
+        console.log('file_url failed. Trying preview_url...');
+        audioSent = await sendAudioWithRetry(previewUrl);
       }
 
       // Fallback message if all audio attempts fail
