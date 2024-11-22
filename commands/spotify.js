@@ -34,7 +34,6 @@ module.exports = {
 
       console.log(`Parsed data: Track: ${trackName}, Artist: ${artistName}, File URL: ${fileUrl}, Cover URL: ${coverUrl}`);
 
-
       // Send the image and interactive buttons
       if (coverUrl || fileUrl) {
         const elements = [
@@ -61,7 +60,7 @@ module.exports = {
           }
         ];
 
-        sendMessage(senderId, {
+        await sendMessage(senderId, {
           attachment: {
             type: 'template',
             payload: {
@@ -75,25 +74,41 @@ module.exports = {
         console.warn('No cover image or file URL available.');
       }
 
-      // Send the audio file
-      if (fileUrl) {
-        sendMessage(senderId, {
-          attachment: {
-            type: 'audio',
-            payload: {
-              url: fileUrl,
-              is_reusable: true
+      // Retry logic for sending the audio file
+      const sendAudioWithRetry = async (retryCount = 3) => {
+        for (let attempt = 1; attempt <= retryCount; attempt++) {
+          try {
+            if (fileUrl) {
+              console.log(`Attempt ${attempt}: Sending audio file...`);
+              await sendMessage(senderId, {
+                attachment: {
+                  type: 'audio',
+                  payload: {
+                    url: fileUrl,
+                    is_reusable: true
+                  }
+                }
+              }, pageAccessToken);
+              console.log('Audio file sent successfully.');
+              return; // Exit the function if successful
+            } else {
+              console.warn('No audio file URL available.');
+              break;
+            }
+          } catch (error) {
+            console.error(`Attempt ${attempt} failed:`, error.message);
+            if (attempt === retryCount) {
+              throw new Error('All retry attempts failed.');
             }
           }
-        }, pageAccessToken);
-        console.log('Sent audio file.');
-      } else {
-        console.warn('No audio file URL available.');
-      }
+        }
+      };
+
+      await sendAudioWithRetry();
 
     } catch (error) {
       console.error('Error retrieving Spotify link or sending messages:', error.message);
-      sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
+      await sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
     }
   }
 };
