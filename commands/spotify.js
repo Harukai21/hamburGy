@@ -41,7 +41,7 @@ module.exports = {
           {
             title: trackName,
             subtitle: `Artist: ${artistName}\nAlbum: ${album}\n Release Date: ${releaseDate}`,
-            image_url: coverUrl || 'https://example.com/default-cover.jpg', // Fallback image
+            image_url: coverUrl || 'https://i.imgur.com/nGCJW9S.jpeg', // Fallback image
             buttons: [
               ...(fileUrl
                 ? [{
