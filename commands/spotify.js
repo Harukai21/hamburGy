@@ -34,17 +34,13 @@ module.exports = {
 
       console.log(`Parsed data: Track: ${trackName}, Artist: ${artistName}, File URL: ${fileUrl}, Cover URL: ${coverUrl}`);
 
-      // Send the text message
-      const textMessage = `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}\n💿 Album: ${album}\n📅 Release Date: ${releaseDate}\n🔗 Spotify: ${spotifyLink}`;
-      sendMessage(senderId, { text: textMessage }, pageAccessToken);
-      console.log('Sent text message.');
 
       // Send the image and interactive buttons
       if (coverUrl || fileUrl) {
         const elements = [
           {
             title: trackName,
-            subtitle: `Artist: ${artistName}\nAlbum: ${album}`,
+            subtitle: `Artist: ${artistName}\nAlbum: ${album}\n Release Date: ${releaseDate}`,
             image_url: coverUrl || 'https://example.com/default-cover.jpg', // Fallback image
             buttons: [
               ...(fileUrl
