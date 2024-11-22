@@ -14,32 +14,33 @@ module.exports = {
       console.log(`Requesting API: ${apiUrl}`);
       const response = await axios.get(apiUrl);
 
+      // Log the full API response for debugging
+      console.log('API Response:', response.data);
+
       const {
-        message = 'No metadata found',
+        message = 'No metadata found', // Fallback message
         metadata: {
           name: trackName = 'Unknown',
           artist: artistName = 'Unknown',
           album = 'Unknown',
           releaseDate = 'Unknown',
           url: spotifyLink = '#',
-          preview_url: previewUrl = null,
+          preview_url: previewUrl = null, // Added preview_url
           cover_url: coverUrl = null
         } = {},
         download: {
-          download: { 
-            file_url: fileUrl = null
-          } = {}
+          download: { file_url: fileUrl = null } = {}
         } = {}
       } = response.data;
 
-      console.log(`Parsed data: Track: ${trackName}, Artist: ${artistName}`);
+      console.log(`Parsed data: Track: ${trackName}, Artist: ${artistName}, File URL: ${fileUrl}, Preview URL: ${previewUrl}, Cover URL: ${coverUrl}`);
 
       // Send the image and interactive buttons
       if (coverUrl || fileUrl) {
         const elements = [
           {
             title: trackName,
-            subtitle: `Artist: ${artistName}\nAlbum: ${album}\nRelease Date: ${releaseDate}`,
+            subtitle: `Artist: ${artistName}\nAlbum: ${album}\n Release Date: ${releaseDate}`,
             image_url: coverUrl || 'https://i.imgur.com/nGCJW9S.jpeg', // Fallback image
             buttons: [
               ...(fileUrl
@@ -74,48 +75,41 @@ module.exports = {
         console.warn('No cover image or file URL available.');
       }
 
-      // Retry logic for sending audio attachments
-      const sendAudioWithRetry = async (audioUrl, maxRetries = 3) => {
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      // Retry logic for sending the audio file, with fallback to preview_url
+      const sendAudioWithRetry = async (retryCount = 3) => {
+        let urlToSend = fileUrl || previewUrl; // Start with fileUrl, fallback to previewUrl if fileUrl is unavailable
+        for (let attempt = 1; attempt <= retryCount; attempt++) {
           try {
-            console.log(`Attempt ${attempt}: Sending audio...`);
-            await sendMessage(senderId, {
-              attachment: {
-                type: 'audio',
-                payload: { url: audioUrl, is_reusable: false }
-              }
-            }, pageAccessToken);
-            console.log('Audio sent successfully.');
-            return true; // Exit on success
+            if (urlToSend) {
+              console.log(`Attempt ${attempt}: Sending audio file...`);
+              await sendMessage(senderId, {
+                attachment: {
+                  type: 'audio',
+                  payload: {
+                    url: urlToSend,
+                    is_reusable: false
+                  }
+                }
+              }, pageAccessToken);
+              return; // Exit the function if successful
+            } else {
+              console.warn('No audio URL available.');
+              break;
+            }
           } catch (error) {
-            console.error(`Attempt ${attempt} failed: ${error.message}`);
-            if (attempt === maxRetries) {
-              console.error('Max retry attempts reached.');
-              return false; // Exit after final failure
+            console.error(`Attempt ${attempt} failed:`, error.message);
+            if (attempt === retryCount && urlToSend === fileUrl && previewUrl) {
+              console.log('Falling back to preview URL for audio.');
+              urlToSend = previewUrl; // Fallback to previewUrl if retries with fileUrl fail
+              attempt = 0; // Reset attempts for previewUrl
+            } else if (attempt === retryCount) {
+              throw new Error('All retry attempts failed.');
             }
           }
         }
       };
 
-      let audioSent = false;
-
-      // Try sending `file_url` first
-      if (fileUrl) {
-        console.log('Trying to send file_url...');
-        audioSent = await sendAudioWithRetry(fileUrl);
-      }
-
-      // If `file_url` fails, try `preview_url`
-      if (!audioSent && previewUrl) {
-        console.log('file_url failed. Trying preview_url...');
-        audioSent = await sendAudioWithRetry(previewUrl);
-      }
-
-      // Fallback message if all audio attempts fail
-      if (!audioSent) {
-        console.warn('All audio sending attempts failed.');
-        await sendMessage(senderId, { text: 'Sorry, we couldn’t send the audio file.' }, pageAccessToken);
-      }
+      await sendAudioWithRetry();
 
     } catch (error) {
       console.error('Error retrieving Spotify link or sending messages:', error.message);
