@@ -18,7 +18,7 @@ module.exports = {
       console.log('API Response:', response.data);
 
       const {
-        message = 'No metadata found', // Fallback message
+        message = 'No metadata found',
         metadata: {
           name: trackName = 'Unknown',
           artist: artistName = 'Unknown',
@@ -39,8 +39,8 @@ module.exports = {
         const elements = [
           {
             title: trackName,
-            subtitle: `Artist: ${artistName}\nAlbum: ${album}\n Release Date: ${releaseDate}`,
-            image_url: coverUrl || 'https://i.imgur.com/nGCJW9S.jpeg', // Fallback image
+            subtitle: `Artist: ${artistName}\nAlbum: ${album}\nRelease Date: ${releaseDate}`,
+            image_url: coverUrl || 'https://i.imgur.com/nGCJW9S.jpeg',
             buttons: [
               ...(fileUrl
                 ? [{
@@ -60,7 +60,7 @@ module.exports = {
           }
         ];
 
-        await sendMessage(senderId, {
+        sendMessage(senderId, {
           attachment: {
             type: 'template',
             payload: {
@@ -75,7 +75,7 @@ module.exports = {
       }
 
       // Retry logic for sending the audio file
-      const sendAudioWithRetry = async (retryCount = 3) => {
+      const sendAudioWithFallback = async (retryCount = 3) => {
         for (let attempt = 1; attempt <= retryCount; attempt++) {
           try {
             if (fileUrl) {
@@ -97,18 +97,54 @@ module.exports = {
             }
           } catch (error) {
             console.error(`Attempt ${attempt} failed:`, error.message);
+
             if (attempt === retryCount) {
-              throw new Error('All retry attempts failed.');
+              console.log('Falling back to uploading the audio to Facebook server.');
+
+              // Attempt to upload the file to the Facebook server
+              try {
+                const uploadResponse = await axios.post(
+                  `https://graph.facebook.com/v21.0/me/message_attachments?access_token=${pageAccessToken}`,
+                  {
+                    message: {
+                      attachment: {
+                        type: 'audio',
+                        payload: {
+                          url: fileUrl,
+                          is_reusable: true
+                        }
+                      }
+                    }
+                  }
+                );
+
+                console.log('Audio uploaded to Facebook server:', uploadResponse.data);
+
+                // Send the reusable attachment ID
+                await sendMessage(senderId, {
+                  attachment: {
+                    type: 'audio',
+                    payload: {
+                      attachment_id: uploadResponse.data.attachment_id
+                    }
+                  }
+                }, pageAccessToken);
+                console.log('Audio file sent using Facebook server.');
+                return; // Exit if fallback succeeded
+              } catch (uploadError) {
+                console.error('Error uploading audio to Facebook server:', uploadError.message);
+                throw new Error('All retry attempts and fallbacks failed.');
+              }
             }
           }
         }
       };
 
-      await sendAudioWithRetry();
+      await sendAudioWithFallback();
 
     } catch (error) {
       console.error('Error retrieving Spotify link or sending messages:', error.message);
-      await sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
+      sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
     }
   }
 };
