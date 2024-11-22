@@ -5,7 +5,7 @@ module.exports = {
   description: 'Downloads music from Spotify.',
   usage: '/spotify <title>',
   author: 'Biru',
-  async execute(senderId, args, pageAccessToken, sendMessage) {
+  async execute(senderId, args, pageAccessToken, sendMessage, api) {
     const query = args.join(' ');
     console.log(`Received Spotify request for query: "${query}"`);
 
@@ -25,29 +25,37 @@ module.exports = {
 
       console.log(`Parsed data: Track: ${trackName}, Artist: ${artistName}, File URL: ${fileUrl}, Cover URL: ${coverUrl}`);
 
-      // Send the text message
-      sendMessage(senderId, {
-        text: `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}\n💿 Album: ${album}\n📅 Release Date: ${releaseDate}\n🔗 Spotify: ${spotifyLink}`
-      }, pageAccessToken);
-      console.log('Sent text message.');
-
-      // Send the image cover
-      if (coverUrl) {
-        sendMessage(senderId, {
+      // Send the combined text and image as a generic template
+      api.graph({
+        recipient: {
+          id: senderId
+        },
+        message: {
           attachment: {
-            type: 'image',
+            type: 'template',
             payload: {
-              url: coverUrl,
-              is_reusable: true
+              template_type: 'generic',
+              elements: [
+                {
+                  title: trackName || 'Unknown Track', // Fallback if trackName is missing
+                  subtitle: `🎤 Artist: ${artistName || 'Unknown Artist'}\n💿 Album: ${album || 'Unknown Album'}\n📅 Released: ${releaseDate || 'Unknown Date'}`,
+                  image_url: coverUrl || 'https://via.placeholder.com/150', // Placeholder if coverUrl is missing
+                  buttons: [
+                    {
+                      type: 'web_url',
+                      url: fileUrl || spotifyLink || '#', // Fallback to Spotify link or nothing
+                      title: fileUrl ? 'Download' : 'Listen on Spotify'
+                    }
+                  ]
+                }
+              ]
             }
           }
-        }, pageAccessToken);
-        console.log('Sent cover image.');
-      } else {
-        console.warn('No cover image URL available.');
-      }
+        }
+      });
+      console.log('Sent generic template with text and image.');
 
-      // Send the audio file
+      // Send the audio file if available
       if (fileUrl) {
         sendMessage(senderId, {
           attachment: {
