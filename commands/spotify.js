@@ -5,7 +5,7 @@ module.exports = {
   description: 'Downloads music from Spotify.',
   usage: '/spotify <title>',
   author: 'Biru',
-  async execute(senderId, args, pageAccessToken, sendMessage, api) {
+  async execute(senderId, args, pageAccessToken, sendMessage) {
     const query = args.join(' ');
     console.log(`Received Spotify request for query: "${query}"`);
 
@@ -18,44 +18,68 @@ module.exports = {
       console.log('API Response:', response.data);
 
       const {
-        message,
-        metadata: { name: trackName, artist: artistName, album, releaseDate, url: spotifyLink, cover_url: coverUrl },
-        download: { download: { file_url: fileUrl } },
+        message = 'No metadata found', // Fallback message
+        metadata: {
+          name: trackName = 'Unknown',
+          artist: artistName = 'Unknown',
+          album = 'Unknown',
+          releaseDate = 'Unknown',
+          url: spotifyLink = '#',
+          cover_url: coverUrl = null
+        } = {},
+        download: {
+          download: { file_url: fileUrl = null } = {}
+        } = {}
       } = response.data;
 
       console.log(`Parsed data: Track: ${trackName}, Artist: ${artistName}, File URL: ${fileUrl}, Cover URL: ${coverUrl}`);
 
-      // Send the combined text and image as a generic template
-      api.graph({
-        recipient: {
-          id: senderId
-        },
-        message: {
+      // Send the text message
+      const textMessage = `🎵 Song: ${trackName}\n🎤 Artist: ${artistName}\n💿 Album: ${album}\n📅 Release Date: ${releaseDate}\n🔗 Spotify: ${spotifyLink}`;
+      sendMessage(senderId, { text: textMessage }, pageAccessToken);
+      console.log('Sent text message.');
+
+      // Send the image and interactive buttons
+      if (coverUrl || fileUrl) {
+        const elements = [
+          {
+            title: trackName,
+            subtitle: `Artist: ${artistName}\nAlbum: ${album}`,
+            image_url: coverUrl || 'https://example.com/default-cover.jpg', // Fallback image
+            buttons: [
+              ...(fileUrl
+                ? [{
+                  type: 'web_url',
+                  url: fileUrl,
+                  title: 'Download'
+                }]
+                : []),
+              ...(spotifyLink !== '#'
+                ? [{
+                  type: 'web_url',
+                  url: spotifyLink,
+                  title: 'Open in Spotify'
+                }]
+                : [])
+            ]
+          }
+        ];
+
+        sendMessage(senderId, {
           attachment: {
             type: 'template',
             payload: {
               template_type: 'generic',
-              elements: [
-                {
-                  title: trackName || 'Unknown Track', // Fallback if trackName is missing
-                  subtitle: `🎤 Artist: ${artistName || 'Unknown Artist'}\n💿 Album: ${album || 'Unknown Album'}\n📅 Released: ${releaseDate || 'Unknown Date'}`,
-                  image_url: coverUrl || 'https://via.placeholder.com/150', // Placeholder if coverUrl is missing
-                  buttons: [
-                    {
-                      type: 'web_url',
-                      url: fileUrl || spotifyLink || '#', // Fallback to Spotify link or nothing
-                      title: fileUrl ? 'Download' : 'Listen on Spotify'
-                    }
-                  ]
-                }
-              ]
+              elements
             }
           }
-        }
-      });
-      console.log('Sent generic template with text and image.');
+        }, pageAccessToken);
+        console.log('Sent interactive message with cover and buttons.');
+      } else {
+        console.warn('No cover image or file URL available.');
+      }
 
-      // Send the audio file if available
+      // Send the audio file
       if (fileUrl) {
         sendMessage(senderId, {
           attachment: {
