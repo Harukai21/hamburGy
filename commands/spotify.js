@@ -82,7 +82,7 @@ module.exports = {
             await sendMessage(senderId, {
               attachment: {
                 type: 'audio',
-                payload: { url: audioUrl, is_reusable: true }
+                payload: { url: audioUrl, is_reusable: false }
               }
             }, pageAccessToken);
             console.log('Audio sent successfully.');
