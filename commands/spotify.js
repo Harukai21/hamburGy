@@ -25,14 +25,18 @@ module.exports = {
           album = 'Unknown',
           releaseDate = 'Unknown',
           url: spotifyLink = '#',
+          preview_url: previewUrl = null,
           cover_url: coverUrl = null
         } = {},
         download: {
-          download: { file_url: fileUrl = null } = {}
+          download: { 
+            file_url: fileUrl = null,
+            audio_base64: audioBase64 = null 
+          } = {}
         } = {}
       } = response.data;
 
-      console.log(`Parsed data: Track: ${trackName}, Artist: ${artistName}, File URL: ${fileUrl}, Cover URL: ${coverUrl}`);
+      console.log(`Parsed data: Track: ${trackName}, Artist: ${artistName}, File URL: ${fileUrl}, Preview URL: ${previewUrl}, Audio Base64: ${audioBase64}`);
 
       // Send the image and interactive buttons
       if (coverUrl || fileUrl) {
@@ -40,7 +44,7 @@ module.exports = {
           {
             title: trackName,
             subtitle: `Artist: ${artistName}\nAlbum: ${album}\nRelease Date: ${releaseDate}`,
-            image_url: coverUrl || 'https://i.imgur.com/nGCJW9S.jpeg',
+            image_url: coverUrl || 'https://i.imgur.com/nGCJW9S.jpeg', // Fallback image
             buttons: [
               ...(fileUrl
                 ? [{
@@ -60,7 +64,7 @@ module.exports = {
           }
         ];
 
-        sendMessage(senderId, {
+        await sendMessage(senderId, {
           attachment: {
             type: 'template',
             payload: {
@@ -74,77 +78,59 @@ module.exports = {
         console.warn('No cover image or file URL available.');
       }
 
-      // Retry logic for sending the audio file
-      const sendAudioWithFallback = async (retryCount = 3) => {
-        for (let attempt = 1; attempt <= retryCount; attempt++) {
+      // Retry logic for sending audio attachments
+      const sendAudioWithRetry = async (url, isBase64 = false, maxRetries = 3) => {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
-            if (fileUrl) {
-              console.log(`Attempt ${attempt}: Sending audio file...`);
-              await sendMessage(senderId, {
-                attachment: {
-                  type: 'audio',
-                  payload: {
-                    url: fileUrl,
-                    is_reusable: true
-                  }
-                }
-              }, pageAccessToken);
-              console.log('Audio file sent successfully.');
-              return; // Exit the function if successful
-            } else {
-              console.warn('No audio file URL available.');
-              break;
-            }
-          } catch (error) {
-            console.error(`Attempt ${attempt} failed:`, error.message);
+            console.log(`Attempt ${attempt}: Sending audio (${isBase64 ? 'Base64' : 'URL'})...`);
+            const payload = isBase64
+              ? { audio_base64: url, is_reusable: true }
+              : { url, is_reusable: true };
 
-            if (attempt === retryCount) {
-              console.log('Falling back to uploading the audio to Facebook server.');
-
-              // Attempt to upload the file to the Facebook server
-              try {
-                const uploadResponse = await axios.post(
-                  `https://graph.facebook.com/v21.0/me/message_attachments?access_token=${pageAccessToken}`,
-                  {
-                    message: {
-                      attachment: {
-                        type: 'audio',
-                        payload: {
-                          url: fileUrl,
-                          is_reusable: true
-                        }
-                      }
-                    }
-                  }
-                );
-
-                console.log('Audio uploaded to Facebook server:', uploadResponse.data);
-
-                // Send the reusable attachment ID
-                await sendMessage(senderId, {
-                  attachment: {
-                    type: 'audio',
-                    payload: {
-                      attachment_id: uploadResponse.data.attachment_id
-                    }
-                  }
-                }, pageAccessToken);
-                console.log('Audio file sent using Facebook server.');
-                return; // Exit if fallback succeeded
-              } catch (uploadError) {
-                console.error('Error uploading audio to Facebook server:', uploadError.message);
-                throw new Error('All retry attempts and fallbacks failed.');
+            await sendMessage(senderId, {
+              attachment: {
+                type: 'audio',
+                payload
               }
+            }, pageAccessToken);
+
+            console.log('Audio sent successfully.');
+            return true; // Exit on success
+          } catch (error) {
+            console.error(`Attempt ${attempt} failed: ${error.message}`);
+            if (attempt === maxRetries) {
+              console.warn('Max retries reached. Moving to the next fallback.');
             }
           }
         }
+        return false; // Indicate failure after retries
       };
 
-      await sendAudioWithFallback();
+      // Attempt to send audio with fallbacks
+      let audioSent = false;
+
+      if (fileUrl) {
+        audioSent = await sendAudioWithRetry(fileUrl);
+      }
+
+      if (!audioSent && audioBase64) {
+        console.log('File URL failed. Attempting to send audio_base64...');
+        audioSent = await sendAudioWithRetry(audioBase64, true);
+      }
+
+      if (!audioSent && previewUrl) {
+        console.log('Audio Base64 failed. Attempting to send preview_url...');
+        audioSent = await sendAudioWithRetry(previewUrl);
+      }
+
+      if (!audioSent) {
+        console.warn('All audio sending attempts failed.');
+        await sendMessage(senderId, { text: 'Sorry, we couldn’t send the audio file.' }, pageAccessToken);
+      }
 
     } catch (error) {
       console.error('Error retrieving Spotify link or sending messages:', error.message);
-      sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
+      await sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
     }
   }
 };
