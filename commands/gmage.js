@@ -16,7 +16,7 @@ const badWords = new Set(
 module.exports = {
   name: 'gmage',
   description: 'Search images in google.',
-  usage: '-gmage <search_query>',
+  usage: '/gmage <search_query>',
   author: 'coffee',
 
   async execute(senderId, args) {
