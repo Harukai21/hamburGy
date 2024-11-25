@@ -6,24 +6,36 @@ module.exports = {
   author: 'Biru',
   usage: 'ask any questions without the command name',
 
-  async execute(senderId, args, pageAccessToken, sendMessage) {
+  async execute(senderId, args, pageAccessToken, sendMessage, event) {
     if (args.length === 0) {
       await sendMessage(senderId, { text: 'How may I assist you today?' }, pageAccessToken);
       return;
     }
-    
+
     const userMessage = args ? (Array.isArray(args) ? args.join(' ') : args) : '';
     let apiUrl;
+    let imageUrl = '';
 
     try {
-      // Detect and handle image or document recognition commands
-      if (userMessage.startsWith('explain_or_answer:')) {
-        const imageUrl = userMessage.replace('explain_or_answer:', '');
-        apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(imageUrl)}&uid=${senderId}`;
-      } else if (userMessage.startsWith('process_file:')) {
-        const fileUrl = userMessage.replace('process_file:', '');
-        apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(fileUrl)}&uid=${senderId}`;
+      // Check if the user wants to process an image
+      if (userMessage.startsWith('process_image')) {
+        if (event.message.reply_to && event.message.reply_to.mid) {
+          // Retrieve the image URL from the replied message
+          imageUrl = await getRepliedImage(event.message.reply_to.mid, pageAccessToken);
+        } else if (event.message?.attachments && event.message.attachments[0]?.type === 'image') {
+          // Retrieve the first image URL from the attachments
+          imageUrl = event.message.attachments[0].payload.url;
+        }
+
+        if (!imageUrl) {
+          await sendMessage(senderId, { text: 'No image found to process. Please attach an image or reply to one.' }, pageAccessToken);
+          return;
+        }
+
+        // API call for image processing
+        apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&url=${encodeURIComponent(imageUrl)}&uid=${senderId}`;
       } else {
+        // General AI message processing
         apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&uid=${senderId}`;
       }
 
@@ -63,6 +75,25 @@ module.exports = {
     }
   },
 };
+
+// Function to retrieve an image URL from a replied message
+async function getRepliedImage(mid, pageAccessToken) {
+  try {
+    const { data } = await axios.get(`https://graph.facebook.com/v21.0/${mid}/attachments`, {
+      params: { access_token: pageAccessToken }
+    });
+
+    if (data && data.data.length > 0 && data.data[0].image_data) {
+      return data.data[0].image_data.url;
+    } else {
+      console.log('No image found in the replied message.');
+      return '';
+    }
+  } catch (error) {
+    console.error('Error fetching replied image:', error);
+    return '';
+  }
+}
 
 // Function to split text into chunks
 function splitMessageIntoChunks(text, maxLength) {
