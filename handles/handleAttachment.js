@@ -1,4 +1,4 @@
-const { execute: aiExecute, userState } = require('../commands/ai'); // Import AI handler and userState
+const { execute: aiExecute } = require('../commands/ai'); // Import AI handler
 const { sendMessage } = require('./sendMessage'); // Import sendMessage
 const axios = require('axios');
 
@@ -30,6 +30,7 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN, command = "default") {
         const imageUrl = attachment.payload.url;
         console.log(`Image received: ${imageUrl}`);
 
+        // Check if the image URL contains "t39.1997-6" (indicating a thumbs-up emoji)
         if (imageUrl.includes('t39.1997-6')) {
           console.log('Thumbs-up emoji detected, ignoring image.');
           break; // Skip processing this image
@@ -50,11 +51,18 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN, command = "default") {
         const fileUrl = attachment.payload.url;
         console.log(`File received: ${fileUrl}`);
 
+        // Turn on typing indicator
         await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_on');
 
-        userState[senderId] = { waitingForFilePrompt: true, fileUrl };
-        await sendMessage(senderId, { text: 'Please provide a prompt to process the file.' }, PAGE_ACCESS_TOKEN);
+        // Process the document file with AI (or another handler if separate)
+        await aiExecute(
+          senderId,
+          `process_file:${fileUrl}`, // Pass file URL for processing
+          PAGE_ACCESS_TOKEN,
+          sendMessage
+        );
 
+        // Turn off typing indicator
         await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_off');
         break;
 
@@ -68,12 +76,21 @@ async function handleAttachment(event, PAGE_ACCESS_TOKEN, command = "default") {
     }
   }
 
+  // If there are multiple images, handle them as a batch
   if (imageUrls.length > 0) {
+    // Turn on typing indicator
     await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_on');
 
-    userState[senderId] = { waitingForImagePrompt: true, imageUrls };
-    await sendMessage(senderId, { text: 'Please provide a prompt to process the received image(s).' }, PAGE_ACCESS_TOKEN);
+    // Process all images together, adjusting for different commands if necessary
+    await aiExecute(
+      senderId,
+      `recognize_images:${JSON.stringify(imageUrls)}`, // Pass multiple image URLs
+      PAGE_ACCESS_TOKEN,
+      sendMessage,
+      command // Pass command for specific handling if needed
+    );
 
+    // Turn off typing indicator
     await setTypingIndicator(senderId, PAGE_ACCESS_TOKEN, 'typing_off');
   }
 }
