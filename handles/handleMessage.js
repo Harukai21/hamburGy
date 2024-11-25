@@ -20,7 +20,7 @@ async function setTypingIndicator(senderId, pageAccessToken, action = 'typing_on
   try {
     await axios.post(`https://graph.facebook.com/v21.0/me/messages?access_token=${pageAccessToken}`, {
       recipient: { id: senderId },
-      sender_action: action,
+      sender_action: action
     });
   } catch (error) {
     console.error(`Error setting typing indicator to ${action}:`, error);
@@ -32,29 +32,6 @@ async function setTypingIndicator(senderId, pageAccessToken, action = 'typing_on
   }
 }
 
-async function getAttachments(mid, pageAccessToken) {
-  if (!mid) {
-    console.error("No message ID provided for getAttachments.");
-    throw new Error("No message ID provided.");
-  }
-
-  try {
-    const { data } = await axios.get(`https://graph.facebook.com/v21.0/${mid}/attachments`, {
-      params: { access_token: pageAccessToken },
-    });
-
-    if (data?.data?.length > 0 && data.data[0].image_data) {
-      return data.data[0].image_data.url;
-    } else {
-      console.error("No image found in the replied message.");
-      throw new Error("No image found in the replied message.");
-    }
-  } catch (error) {
-    console.error("Error fetching attachments:", error);
-    throw new Error("Failed to fetch attachments.");
-  }
-}
-
 async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
   const currentTime = Date.now();
@@ -63,7 +40,7 @@ async function handleMessage(event, pageAccessToken) {
   if (userSpamData.has(senderId) && userSpamData.get(senderId).blockedUntil) {
     if (currentTime < userSpamData.get(senderId).blockedUntil) {
       console.log(`Ignoring message from ${senderId} as they are currently blocked.`);
-      return;
+      return; // Skip message handling for blocked users
     } else {
       userSpamData.delete(senderId);
       console.log(`User ${senderId} has been unblocked.`);
@@ -84,7 +61,7 @@ async function handleMessage(event, pageAccessToken) {
           console.log(`Image received: ${imageUrl}`);
           if (imageUrl.includes('t39.1997-6')) {
             console.log('Thumbs-up emoji detected, ignoring image.');
-            break;
+            break; 
           }
           imageUrls.push(imageUrl);
           break;
@@ -100,7 +77,9 @@ async function handleMessage(event, pageAccessToken) {
         case 'file':
           const fileUrl = attachment.payload.url;
           console.log(`File received: ${fileUrl}`);
+          await setTypingIndicator(senderId, pageAccessToken, 'typing_on');
           await aiExecute(senderId, `process_file:${fileUrl}`, pageAccessToken, sendMessage);
+          await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
           break;
 
         case 'location':
@@ -114,16 +93,18 @@ async function handleMessage(event, pageAccessToken) {
     }
 
     if (imageUrls.length > 0) {
+      await setTypingIndicator(senderId, pageAccessToken, 'typing_on');
       await aiExecute(senderId, `recognize_images:${JSON.stringify(imageUrls)}`, pageAccessToken, sendMessage);
+      await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
     }
     await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
-    return;
+    return; 
   }
 
   if (event.message.text) {
     const messageText = event.message.text.trim();
-
-    // Handle potential spam
+    
+    // Initialize or update spam data for the user
     if (!userSpamData.has(senderId)) {
       userSpamData.set(senderId, { count: 0, firstMessageTime: currentTime, warned: false, lastMessageTime: currentTime });
     }
@@ -171,31 +152,23 @@ async function handleMessage(event, pageAccessToken) {
 
       if (commands.has(commandName)) {
         const command = commands.get(commandName);
-        try {
-          let imageUrl = '';
-
-          if (event.message?.reply_to?.mid) {
-            imageUrl = await getAttachments(event.message.reply_to.mid, pageAccessToken);
-          } else if (event.message?.attachments?.[0]?.type === 'image') {
-            imageUrl = event.message.attachments[0].payload.url;
-          }
-
-          await command.execute(senderId, args, pageAccessToken, event, imageUrl);
-        } catch (error) {
-          if (commandName === 'ai') {
-            await sendMessage(senderId, { text: "hello 👋🏻 how can I assist you today??\n\nNote: Don't use 'ai'; instead, ask your question directly. Thank you! 🤗" }, pageAccessToken);
-          } else {
-            console.error(`Error executing command "${commandName}":`, error);
-            await sendMessage(senderId, { text: 'There was an error executing that command.' }, pageAccessToken);
-          }
-        }
-      } else {
-        await sendMessage(senderId, { text: `Unknown command: "${commandName}". Type /help for a list of commands.` }, pageAccessToken);
+        await command.execute(senderId, args, pageAccessToken, sendMessage);
+      } else if (commandName !== 'no') {
+        await sendMessage(senderId, { 
+          text: `The command "${messageText}" does not exist. Please type /help to see the list of commands.` 
+        }, pageAccessToken);
       }
     } else {
-      const aiCommand = commands.get('ai');
-      if (aiCommand) {
-        await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
+      const commandName = messageText.toLowerCase().split(/\s+/)[0];
+      if (commands.has(commandName)) {
+        await sendMessage(senderId, { 
+          text: `This command needs a prefix. Please use "${prefix}${commandName}".` 
+        }, pageAccessToken);
+      } else {
+        const aiCommand = commands.get('ai');
+        if (aiCommand) {
+          await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
+        }
       }
     }
   }
