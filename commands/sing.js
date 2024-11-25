@@ -27,92 +27,100 @@ module.exports = {
         return sendMessage(senderId, { text: "No results found. Please try again with a different keyword." }, pageAccessToken);
       }
 
-      // Shuffle search results to randomize selection
-      const shuffledResults = searchResults.items.sort(() => Math.random() - 0.5);
+      // Get the first two results
+      const topResults = searchResults.items.slice(0, 2);
+      if (!topResults.length) {
+        console.error("No suitable results found in the top 2.");
+        return sendMessage(senderId, { text: "No suitable results found. Please try again." }, pageAccessToken);
+      }
 
-      let video, videoId, videoDownloadUrl;
+      // Function to calculate similarity score
+      const calculateSimilarity = (query, title) => {
+        const queryWords = query.toLowerCase().split(" ");
+        const titleWords = title.toLowerCase().split(" ");
+        const matches = queryWords.filter((word) => titleWords.includes(word));
+        return matches.length / queryWords.length; // Ratio of matched words
+      };
 
-      // Loop through shuffled results to find a downloadable video
-      for (let result of shuffledResults) {
-        video = result;
-        videoId = video.id?.videoId || video.id;
+      // Choose the most relevant video
+      let bestMatch = topResults[0];
+      let highestScore = 0;
 
-        console.log(`Attempting to fetch download URL for video: ${video.title}`);
-
-        try {
-          const apiUrl = `https://vneerapi.onrender.com/ytmp3?url=https://youtu.be/${videoId}`;
-          const response = await axios.get(apiUrl);
-
-          if (response.data && response.data.downloadUrl) {
-            videoDownloadUrl = response.data.downloadUrl;
-            console.log(`Download URL retrieved successfully: ${response.data.title}`);
-            break;
-          } else {
-            console.warn(`Failed to retrieve download URL for video: ${video.title}. Trying next result.`);
-          }
-        } catch (error) {
-          console.error("Error fetching download URL:", error);
+      topResults.forEach((video) => {
+        const score = calculateSimilarity(searchQuery, video.title || "");
+        console.log(`Calculated similarity for "${video.title}": ${score}`);
+        if (score > highestScore) {
+          highestScore = score;
+          bestMatch = video;
         }
+      });
+
+      const video = bestMatch;
+      const videoId = video.id?.videoId || video.id;
+
+      console.log(`Selected video: ${video.title} with similarity score: ${highestScore}`);
+
+      // Fetch download URL
+      const apiUrl = `https://vneerapi.onrender.com/ytmp3?url=https://youtu.be/${videoId}`;
+      const response = await axios.get(apiUrl);
+
+      if (!response.data || !response.data.downloadUrl) {
+        console.error("Failed to retrieve download URL.");
+        return sendMessage(senderId, { text: "Failed to fetch download URL. Please try again." }, pageAccessToken);
       }
 
-      if (videoDownloadUrl) {
-        // Extract metadata
-        const videoTitle = video.title || "Unknown Title";
-        const channelName = video.channel?.name || "Unknown Channel";
-        const duration = video.duration || "Unknown Duration";
-        const videoUrl = `https://youtu.be/${videoId}`;
+      const videoDownloadUrl = response.data.downloadUrl;
+      const videoTitle = video.title || "Unknown Title";
+      const channelName = video.channel?.name || "Unknown Channel";
+      const duration = video.duration || "Unknown Duration";
+      const videoUrl = `https://youtu.be/${videoId}`;
 
-        console.log(`Sending metadata: ${videoTitle}, ${channelName}, ${duration}`);
+      console.log(`Sending metadata: ${videoTitle}, ${channelName}, ${duration}`);
 
-        // Send metadata as a template
-        const elements = [
-          {
-            title: videoTitle,
-            subtitle: `Channel: ${channelName}\nDuration: ${duration}`,
-            image_url: video.thumbnails?.[0]?.url || "https://i.imgur.com/nGCJW9S.jpeg", // Fallback image
-            buttons: [
-              {
-                type: "web_url",
-                url: videoDownloadUrl,
-                title: "Download"
-              },
-              {
-                type: "web_url",
-                url: videoUrl,
-                title: "Watch on YouTube"
-              }
-            ]
-          }
-        ];
-
-        await sendMessage(senderId, {
-          attachment: {
-            type: "template",
-            payload: {
-              template_type: "generic",
-              elements
-            }
-          }
-        }, pageAccessToken);
-
-        console.log("Sent interactive message with metadata and buttons.");
-
-        // Send the audio file
-        await sendMessage(senderId, {
-          attachment: {
-            type: "audio",
-            payload: {
+      // Send metadata as a template
+      const elements = [
+        {
+          title: videoTitle,
+          subtitle: `Channel: ${channelName}\nDuration: ${duration}`,
+          image_url: video.thumbnails?.[0]?.url || "https://i.imgur.com/nGCJW9S.jpeg", // Fallback image
+          buttons: [
+            {
+              type: "web_url",
               url: videoDownloadUrl,
-              is_reusable: false
+              title: "Download"
+            },
+            {
+              type: "web_url",
+              url: videoUrl,
+              title: "Watch on YouTube"
             }
-          }
-        }, pageAccessToken);
-        console.log("Sent audio file.");
-      } else {
-        console.error("No downloadable video found in search results.");
-        sendMessage(senderId, { text: "Failed to download the audio. Please try again." }, pageAccessToken);
-      }
+          ]
+        }
+      ];
 
+      await sendMessage(senderId, {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: "generic",
+            elements
+          }
+        }
+      }, pageAccessToken);
+
+      console.log("Sent interactive message with metadata and buttons.");
+
+      // Send the audio file
+      await sendMessage(senderId, {
+        attachment: {
+          type: "audio",
+          payload: {
+            url: videoDownloadUrl,
+            is_reusable: false
+          }
+        }
+      }, pageAccessToken);
+      console.log("Sent audio file.");
     } catch (error) {
       console.error("Search Error:", error);
       sendMessage(senderId, { text: "An error occurred while searching for the video." }, pageAccessToken);
