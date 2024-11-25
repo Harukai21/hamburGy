@@ -6,7 +6,6 @@ const fs = require('fs');
 const path = require('path');
 const { handleMessage } = require('./handles/handleMessage');
 const { handlePostback } = require('./handles/handlePostback');
-const { handleAttachment } = require('./handles/handleAttachment');
 const { startAutoPost } = require('./utils/autopost');
 const { markSeen } = require('./markSeen'); // Import markSeen
 const axios = require('axios');
@@ -58,7 +57,7 @@ app.post('/webhook', (req, res) => {
                         handleMessage(event, PAGE_ACCESS_TOKEN);
                     }
                     if (event.message.attachments) {
-                        handleAttachment(event, PAGE_ACCESS_TOKEN);
+                        handleMessage(event, PAGE_ACCESS_TOKEN);
                     }
                 } else if (event.postback) {
                     handlePostback(event, PAGE_ACCESS_TOKEN);
