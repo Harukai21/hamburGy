@@ -1,13 +1,12 @@
 const { Client } = require("youtubei");
-const { ytdown } = require("nayan-media-downloader");
-const axios = require('axios');
+const axios = require("axios");
 
 const youtube = new Client();
 
 module.exports = {
   name: "sing",
-  description: "downloads mp3 from youtube",
-  usage: '/sing <songTitle>',
+  description: "downloads mp3 from YouTube",
+  usage: "/sing <songTitle>",
   author: "Biru",
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
@@ -38,32 +37,35 @@ module.exports = {
         video = result;
         videoId = video.id?.videoId || video.id;
 
-        console.log(`Attempting to download audio for video: ${video.title}`);
+        console.log(`Attempting to fetch download URL for video: ${video.title}`);
         
-        // Notify the user that the download attempt is starting
-        sendMessage(senderId, { text: `Downloading "${video.title}" as audio...` }, pageAccessToken);
+        // Notify the user that the process is starting
+        sendMessage(senderId, { text: `Fetching download link for "${video.title}"...` }, pageAccessToken);
 
         try {
-          const videoInfo = await ytdown(`https://youtu.be/${videoId}`);
-          
-          if (videoInfo.status) {
-            videoDownloadUrl = videoInfo.data.video;
-            console.log(`Download successful: ${video.title}`);
+          const apiUrl = `https://vneerapi.onrender.com/ytmp3?url=https://youtu.be/${videoId}`;
+          const response = await axios.get(apiUrl);
+
+          if (response.data && response.data.downloadUrl) {
+            videoDownloadUrl = response.data.downloadUrl;
+            console.log(`Download URL retrieved successfully: ${response.data.title}`);
             break;
           } else {
-            console.warn(`Download failed for video: ${video.title}. Trying next result.`);
+            console.warn(`Failed to retrieve download URL for video: ${video.title}. Trying next result.`);
           }
-
         } catch (error) {
-          console.error("Download Error:", error);
+          console.error("Error fetching download URL:", error);
         }
       }
-      
-      // If a downloadable video was found, send it; otherwise, notify the user
+
       if (videoDownloadUrl) {
         sendMessage(senderId, {
+          text: `Downloading "${video.title}"...`,
+        }, pageAccessToken);
+
+        sendMessage(senderId, {
           attachment: {
-            type: 'audio',
+            type: "audio",
             payload: {
               url: videoDownloadUrl,
               is_reusable: false
