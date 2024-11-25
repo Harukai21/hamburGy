@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { sendMessage } = require('./sendMessage');
 const { activeChats } = require('../commands/chat');
+const { execute: aiExecute } = require('../commands/ai'); // AI command handler
 
 const commands = new Map();
 const prefix = '/';
@@ -33,8 +34,6 @@ async function setTypingIndicator(senderId, pageAccessToken, action = 'typing_on
 
 async function handleMessage(event, pageAccessToken) {
   const senderId = event.sender.id;
-  const messageText = event.message.text.trim();
-  
   const currentTime = Date.now();
 
   // Check if the user is blocked and skip handling if within the blocked period
@@ -43,7 +42,6 @@ async function handleMessage(event, pageAccessToken) {
       console.log(`Ignoring message from ${senderId} as they are currently blocked.`);
       return; // Skip message handling for blocked users
     } else {
-      // Unblock user after 30 minutes has passed
       userSpamData.delete(senderId);
       console.log(`User ${senderId} has been unblocked.`);
     }
@@ -52,79 +50,125 @@ async function handleMessage(event, pageAccessToken) {
   // Set typing indicator
   await setTypingIndicator(senderId, pageAccessToken, 'typing_on');
 
-  // Initialize or update spam data for the user
-  if (!userSpamData.has(senderId)) {
-    userSpamData.set(senderId, { count: 0, firstMessageTime: currentTime, warned: false, lastMessageTime: currentTime });
-  }
+  if (event.message.attachments) {
+    const attachments = event.message.attachments;
+    const imageUrls = [];
 
-  const userData = userSpamData.get(senderId);
+    for (const attachment of attachments) {
+      switch (attachment.type) {
+        case 'image':
+          const imageUrl = attachment.payload.url;
+          console.log(`Image received: ${imageUrl}`);
+          if (imageUrl.includes('t39.1997-6')) {
+            console.log('Thumbs-up emoji detected, ignoring image.');
+            break; 
+          }
+          imageUrls.push(imageUrl);
+          break;
 
-  // Check message frequency
-  if (currentTime - userData.lastMessageTime < 2000) { // 2 seconds threshold
-    userData.count++;
-  } else {
-    userData.count = 1;
-  }
+        case 'video':
+          console.log(`Video received: ${attachment.payload.url}`);
+          break;
 
-  userData.lastMessageTime = currentTime;
+        case 'audio':
+          console.log(`Audio received: ${attachment.payload.url}`);
+          break;
 
-  // Reset spam count if 12 seconds have passed
-  if (currentTime - userData.firstMessageTime > 12000) {
-    userData.count = 1;
-    userData.firstMessageTime = currentTime;
-    userData.warned = false;
-  }
+        case 'file':
+          const fileUrl = attachment.payload.url;
+          console.log(`File received: ${fileUrl}`);
+          await setTypingIndicator(senderId, pageAccessToken, 'typing_on');
+          await aiExecute(senderId, `process_file:${fileUrl}`, pageAccessToken, sendMessage);
+          await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
+          break;
 
-  // If spam threshold is reached
-  if (userData.count >= 8) {
-    if (!userData.warned) {
-      // Send warning message
-      await sendMessage(senderId, { text: "Warning: Do not spam or you'll be blocked for 30 minutes." }, pageAccessToken);
-      userData.warned = true;
-    } else {
-      // Block user for 30 minutes by setting blockedUntil timestamp
-      userData.blockedUntil = currentTime + 30 * 60 * 1000;
-      console.log(`User ${senderId} has been temporarily blocked for 30 minutes.`);
-      return; // Exit function after "blocking" the user
+        case 'location':
+          const { lat, long } = attachment.payload.coordinates;
+          console.log(`Location received: Latitude ${lat}, Longitude ${long}`);
+          break;
+
+        default:
+          console.log(`Unknown attachment type received: ${attachment.type}`);
+      }
     }
-  }
 
-  const chatCommand = commands.get('chat');
-  if (activeChats.has(senderId)) {
-    if (messageText.toLowerCase() === '/quit') {
-      await chatCommand.quit(senderId, pageAccessToken, sendMessage);
-    } else {
-      await chatCommand.routeMessage(senderId, messageText, pageAccessToken, sendMessage);
+    if (imageUrls.length > 0) {
+      await setTypingIndicator(senderId, pageAccessToken, 'typing_on');
+      await aiExecute(senderId, `recognize_images:${JSON.stringify(imageUrls)}`, pageAccessToken, sendMessage);
+      await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
     }
     await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
-    return;
+    return; 
   }
 
-  // Check if the message starts with the prefix
-  if (messageText.startsWith(prefix)) {
-    const args = messageText.slice(prefix.length).split(/\s+/);
-    const commandName = args.shift().toLowerCase();
-
-    if (commands.has(commandName)) {
-      const command = commands.get(commandName);
-      await command.execute(senderId, args, pageAccessToken, sendMessage);
-    } else if (commandName !== 'no') {
-      await sendMessage(senderId, { 
-        text: `The command "${messageText}" does not exist. Please type /help to see the list of commands.` 
-      }, pageAccessToken);
-      await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
-      return; 
+  if (event.message.text) {
+    const messageText = event.message.text.trim();
+    
+    // Initialize or update spam data for the user
+    if (!userSpamData.has(senderId)) {
+      userSpamData.set(senderId, { count: 0, firstMessageTime: currentTime, warned: false, lastMessageTime: currentTime });
     }
-  } else {
-    const commandName = messageText.toLowerCase().split(/\s+/)[0];
-    if (commands.has(commandName)) {
-      await sendMessage(senderId, { 
-        text: `This command needs a prefix. Please use "${prefix}${commandName}".` 
-      }, pageAccessToken);
+
+    const userData = userSpamData.get(senderId);
+    if (currentTime - userData.lastMessageTime < 2000) {
+      userData.count++;
     } else {
-      const aiCommand = commands.get('ai');
-      if (aiCommand) {
-        await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
+      userData.count = 1;
+    }
+
+    userData.lastMessageTime = currentTime;
+
+    if (currentTime - userData.firstMessageTime > 12000) {
+      userData.count = 1;
+      userData.firstMessageTime = currentTime;
+      userData.warned = false;
+    }
+
+    if (userData.count >= 8) {
+      if (!userData.warned) {
+        await sendMessage(senderId, { text: "Warning: Do not spam or you'll be blocked for 30 minutes." }, pageAccessToken);
+        userData.warned = true;
+      } else {
+        userData.blockedUntil = currentTime + 30 * 60 * 1000;
+        console.log(`User ${senderId} has been temporarily blocked for 30 minutes.`);
+        return;
+      }
+    }
+
+    const chatCommand = commands.get('chat');
+    if (activeChats.has(senderId)) {
+      if (messageText.toLowerCase() === '/quit') {
+        await chatCommand.quit(senderId, pageAccessToken, sendMessage);
+      } else {
+        await chatCommand.routeMessage(senderId, messageText, pageAccessToken, sendMessage);
+      }
+      await setTypingIndicator(senderId, pageAccessToken, 'typing_off');
+      return;
+    }
+
+    if (messageText.startsWith(prefix)) {
+      const args = messageText.slice(prefix.length).split(/\s+/);
+      const commandName = args.shift().toLowerCase();
+
+      if (commands.has(commandName)) {
+        const command = commands.get(commandName);
+        await command.execute(senderId, args, pageAccessToken, sendMessage);
+      } else if (commandName !== 'no') {
+        await sendMessage(senderId, { 
+          text: `The command "${messageText}" does not exist. Please type /help to see the list of commands.` 
+        }, pageAccessToken);
+      }
+    } else {
+      const commandName = messageText.toLowerCase().split(/\s+/)[0];
+      if (commands.has(commandName)) {
+        await sendMessage(senderId, { 
+          text: `This command needs a prefix. Please use "${prefix}${commandName}".` 
+        }, pageAccessToken);
+      } else {
+        const aiCommand = commands.get('ai');
+        if (aiCommand) {
+          await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
+        }
       }
     }
   }
