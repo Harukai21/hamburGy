@@ -1,44 +1,34 @@
 const axios = require('axios');
 
-const userState = {}; // Store user state for attachments and prompts
-
 module.exports = {
   name: 'ai',
   description: 'Handles AI responses for incoming messages, images, and documents',
   author: 'Biru',
   usage: 'ask any questions without the command name',
-  userState,
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
-    const userMessage = Array.isArray(args) ? args.join(' ') : args;
-
-    if (!userMessage && !(userState[senderId]?.waitingForImagePrompt || userState[senderId]?.waitingForFilePrompt)) {
+    if (args.length === 0) {
       await sendMessage(senderId, { text: 'How may I assist you today?' }, pageAccessToken);
       return;
     }
-
+    
+    const userMessage = args ? (Array.isArray(args) ? args.join(' ') : args) : '';
     let apiUrl;
 
     try {
-      // Check if there's an image or file URL stored, waiting for processing
-      if (userState[senderId]) {
-        if (userState[senderId].waitingForImagePrompt && userMessage) {
-          const imageUrls = userState[senderId].imageUrls;
-          apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&imageUrls=${encodeURIComponent(JSON.stringify(imageUrls))}&uid=${senderId}`;
-          delete userState[senderId]; // Clear state after processing
-        } else if (userState[senderId].waitingForFilePrompt && userMessage) {
-          const fileUrl = userState[senderId].fileUrl;
-          apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&fileUrl=${encodeURIComponent(fileUrl)}&uid=${senderId}`;
-          delete userState[senderId]; // Clear state after processing
-        }
-      }
-
-      // If no image or file is awaiting processing, handle standard text messages
-      if (!apiUrl) {
+      // Detect and handle image or document recognition commands
+      if (userMessage.startsWith('explain_or_answer:')) {
+        const imageUrl = userMessage.replace('explain_or_answer:', '');
+        apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(imageUrl)}&uid=${senderId}`;
+      } else if (userMessage.startsWith('process_file:')) {
+        const fileUrl = userMessage.replace('process_file:', '');
+        apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(fileUrl)}&uid=${senderId}`;
+      } else {
         apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&uid=${senderId}`;
       }
 
-      const response = await axios.get(apiUrl);
+      // Retry logic for the API call
+      const response = await retryRequest(() => axios.get(apiUrl), 3, 2000);
       let message = response.data.message || 'No response from the API';
       const generatedImageUrl = response.data.img_urls?.[0];
 
@@ -69,7 +59,7 @@ module.exports = {
       }
     } catch (error) {
       console.error('Error processing AI request:', error);
-      await sendMessage(senderId, { text: 'There was an error processing your request. Please try again.' }, pageAccessToken);
+      await sendMessage(senderId, { text: 'Request timeout: please try again. If this persists, you can contact my admin: https://www.facebook.com/valneer.2024' }, pageAccessToken);
     }
   },
 };
@@ -85,4 +75,24 @@ function splitMessageIntoChunks(text, maxLength) {
   }
 
   return chunks;
+}
+
+// Retry function with customizable attempts and delay
+async function retryRequest(requestFn, retries, delay) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await requestFn();
+    } catch (error) {
+      if (attempt === retries) {
+        throw error; // Throw error if max retries reached
+      }
+      console.warn(`Retry ${attempt} failed. Retrying in ${delay}ms...`);
+      await sleep(delay); // Wait before retrying
+    }
+  }
+}
+
+// Sleep function for delay between retries
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
