@@ -48,7 +48,7 @@ module.exports = {
 
       // Translate the word to Japanese
       const translationResponse = await axios.get(
-        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=${encodeURIComponent(entry.phonetics[0]).text}`
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=${encodeURIComponent(entry.word}`
       );
 
       const translatedWord = translationResponse.data[0][0][0]; // Extract the translated word
@@ -56,7 +56,7 @@ module.exports = {
 
       // Fetch audio from tts.quest API
       const audioApi = await axios.get(
-        `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(translatedWord)}&speaker=7`
+        `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(translatedWord)}&speaker=6`
       );
 
       if (audioApi.data && audioApi.data.mp3StreamingUrl) {
