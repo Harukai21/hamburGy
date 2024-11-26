@@ -5,7 +5,7 @@ const boldFont = {
   ' ': ' ',
   'a': '𝗮', 'b': '𝗯', 'c': '𝗰', 'd': '𝗱', 'e': '𝗲', 'f': '𝗳', 'g': '𝗴', 'h': '𝗵',
   'i': '𝗶', 'j': '𝗷', 'k': '𝗸', 'l': '𝗹', 'm': '𝗺', 'n': '𝗻', 'o': '𝗼', 'p': '𝗽', 'q': '𝗾',
-  'r': '𝗿', 's': '𝘀', 't': '𝘁', 'u': '𝘂', 'v': '𝘃', 'w': '𝘄', 'x': '𝘅', 'y': '𝘆', 'z': '𝘇',
+  'r': '𝗿', 's': '𝗦', 't': '𝗧', 'u': '𝗨', 'v': '𝗩', 'w': '𝗪', 'x': '𝗫', 'y': '𝗬', 'z': '𝗭',
   'A': '𝗔', 'B': '𝗕', 'C': '𝗖', 'D': '𝗗', 'E': '𝗘', 'F': '𝗙', 'G': '𝗚', 'H': '𝗛',
   'I': '𝗜', 'J': '𝗝', 'K': '𝗞', 'L': '𝗟', 'M': '𝗠', 'N': '𝗡', 'O': '𝗢', 'P': '𝗣', 'Q': '𝗤',
   'R': '𝗥', 'S': '𝗦', 'T': '𝗧', 'U': '𝗨', 'V': '𝗩', 'W': '𝗪', 'X': '𝗫', 'Y': '𝗬', 'Z': '𝗭'
@@ -43,13 +43,13 @@ module.exports = {
     const totalPages = Math.ceil(totalCommands / commandsPerPage);
 
     if (args[0] === 'all') {
-      // Show all commands
-      const allCommands = commands.map(cmd => cmd.formatted).join('\n\n');
+      // Show all command names
+      const allCommandNames = commands.map(cmd => `╰┈➤ ${toBold(cmd.name)}`).join('\n');
       const helpMessage = `♡   ∩_∩
      („• ֊ •„)♡
 ┏━━━━━∪∪━━━━━━┓
-♡    𝘾𝙊𝙈𝙈𝘼𝙉𝘿𝙎 𝙇𝙄𝙎𝙏    ♡
-┗━━━━━━━━━━━━━┛\n\n ➥ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅꜱ: ${totalCommands}\n\n${allCommands}`;
+♡   𝘾𝙊𝙈𝙈𝘼𝙉𝘿 𝙉𝘼𝙈𝙀𝙎   ♡
+┗━━━━━━━━━━━━━┛\n\n ➥ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅꜱ: ${totalCommands}\n\n${allCommandNames}`;
       return sendMessage(senderId, { text: helpMessage }, pageAccessToken);
     }
 
@@ -65,7 +65,7 @@ module.exports = {
     const helpMessage = `♡   ∩_∩
      („• ֊ •„)♡
 ┏━━━━━∪∪━━━━━━┓
-♡    𝘾𝙊𝙈𝙼𝘼𝙉𝘿𝙎 𝙋𝘼𝙂𝙀 ${page}/${totalPages}   ♡
+♡    𝘾𝙊𝙈𝙈𝘼𝙉𝘿𝙎 𝙋𝘼𝙂𝙀 ${page}/${totalPages}   ♡
 ┗━━━━━━━━━━━━━┛\n\n ➥ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅꜱ: ${totalCommands}\n\n${pageCommands}`;
 
     sendMessage(senderId, { text: helpMessage }, pageAccessToken);
