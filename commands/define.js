@@ -16,53 +16,34 @@ module.exports = {
 
     try {
       console.log(`Looking up definition for: ${word}`);
-      
+
       // Fetch definition from dictionary API
       const response = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
-      const entry = response.data[0];
+      const definition = response.data[0]?.meanings[0]?.definitions[0]?.definition;
 
-      const meanings = entry.meanings.map((meaning) => {
-        const partOfSpeech = meaning.partOfSpeech;
-        const definitions = meaning.definitions.map((definition) => `  ⌲ ${definition.definition}`).join("\n");
-        return `  ❑ ${partOfSpeech}\n${definitions}`;
-      }).join("\n\n");
-
-      let message = `𝗪𝗢𝗥𝗗: ${entry.word}\n`;
-
-      if (entry.phonetics && entry.phonetics.length > 0) {
-        message += `𝗣𝗛𝗢𝗡𝗘𝗧𝗜𝗖: ${entry.phonetics[0].text || "N/A"}\n`;
+      if (!definition) {
+        return sendMessage(senderId, { text: `No definition found for ${word}.` }, pageAccessToken);
       }
 
-      if (entry.origin) {
-        message += `𝗢𝗥𝗜𝗚𝗜𝗡: ${entry.origin}\n`;
-      }
+      const content = `The definition of ${word} is ${definition}`;
+      await sendMessage(senderId, { text: `Definition of ${word}: ${definition}` }, pageAccessToken);
 
-      if (meanings) {
-        message += `\n𝗠𝗘𝗔𝗡𝗜𝗡𝗚𝗦\n${meanings}`;
-      } else {
-        message += "No meanings found.";
-      }
-
-      // Send the text message
-      await sendMessage(senderId, { text: message }, pageAccessToken);
-
-      // Translate the word to Japanese
+      // Translate content to Japanese
       const translationResponse = await axios.get(
-        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=${encodeURIComponent(entry.word}`
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=${encodeURIComponent(content)}`
       );
 
-      const translatedWord = translationResponse.data[0][0][0]; // Extract the translated word
-      console.log(`Translated word: ${translatedWord}`);
+      const translatedContent = translationResponse.data[0]?.map((item) => item[0]).join("") || content;
 
-      // Fetch audio from tts.quest API
+      // Fetch audio from tts.quest API using the translated content
       const audioApi = await axios.get(
-        `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(translatedWord)}&speaker=1`
+        `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(translatedContent)}&speaker=5`
       );
 
       if (audioApi.data && audioApi.data.mp3StreamingUrl) {
         const audioUrl = audioApi.data.mp3StreamingUrl;
 
-        // Send the audio message separately
+        // Send the audio message
         await sendMessage(senderId, {
           attachment: {
             type: "audio",
@@ -75,14 +56,13 @@ module.exports = {
       } else {
         console.warn("Audio generation failed, sending definition without audio.");
       }
-      
     } catch (error) {
-      console.error("Error fetching word definition:", error);
+      console.error("Error fetching word definition or generating audio:", error);
 
       if (error.response && error.response.status === 404) {
-        sendMessage(senderId, { text: "Word not found. Please check the spelling or try a different word." }, pageAccessToken);
+        sendMessage(senderId, { text: `Word not found. Please check the spelling or try a different word.` }, pageAccessToken);
       } else {
-        sendMessage(senderId, { text: "An error occurred while trying to retrieve the definition." }, pageAccessToken);
+        sendMessage(senderId, { text: `An error occurred while trying to retrieve the definition or generate audio.` }, pageAccessToken);
       }
     }
   }
