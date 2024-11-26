@@ -43,18 +43,26 @@ module.exports = {
         message += "No meanings found.";
       }
 
-      // Send the text message only
+      // Send the text message
       await sendMessage(senderId, { text: message }, pageAccessToken);
+
+      // Translate the word to Japanese
+      const translationResponse = await axios.get(
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=${encodeURIComponent(definitions)}`
+      );
+
+      const translatedWord = translationResponse.data[0][0][0]; // Extract the translated word
+      console.log(`Translated word: ${translatedWord}`);
 
       // Fetch audio from tts.quest API
       const audioApi = await axios.get(
-        `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(entry.word)}&speaker=5`
+        `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(translatedWord)}&speaker=7`
       );
 
       if (audioApi.data && audioApi.data.mp3StreamingUrl) {
         const audioUrl = audioApi.data.mp3StreamingUrl;
 
-        // Send the audio message separately, as a single attachment
+        // Send the audio message separately
         await sendMessage(senderId, {
           attachment: {
             type: "audio",
