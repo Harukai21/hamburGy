@@ -48,7 +48,7 @@ module.exports = {
 
       // Translate the word to Japanese
       const translationResponse = await axios.get(
-        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=${encodeURIComponent(definitions)}`
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=${encodeURIComponent(entry.phonetics[0]).text}`
       );
 
       const translatedWord = translationResponse.data[0][0][0]; // Extract the translated word
