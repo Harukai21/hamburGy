@@ -8,7 +8,7 @@ module.exports = {
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const word = args.join(" ");
-    
+
     if (!word) {
       console.error("No word provided.");
       return sendMessage(senderId, { text: "Please provide a word to look up." }, pageAccessToken);
@@ -51,13 +51,13 @@ module.exports = {
         `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(entry.word)}&speaker=3`
       );
 
-      if (audioApi.data && audioApi.data.success) {
-        const audioUrl = audioApi.data.mp3;
+      if (audioApi.data && audioApi.data.mp3StreamingUrl) {
+        const audioUrl = audioApi.data.mp3StreamingUrl;
 
         // Send the audio message separately, as a single attachment
         await sendMessage(senderId, {
           attachment: {
-            type: 'audio',
+            type: "audio",
             payload: {
               url: audioUrl,
               is_reusable: true
