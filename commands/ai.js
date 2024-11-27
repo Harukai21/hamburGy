@@ -16,15 +16,21 @@ module.exports = {
     let apiUrl;
 
     try {
+      // Handle long prompts by truncating them
+      const maxPromptLength = 2000; // Set a limit for the prompt length
+      const truncatedMessage = userMessage.length > maxPromptLength 
+        ? userMessage.slice(0, maxPromptLength) 
+        : userMessage;
+
       // Construct the API URL based on the command
-      if (userMessage.startsWith('explain_or_answer:')) {
-        const imageUrl = userMessage.replace('explain_or_answer:', '');
+      if (truncatedMessage.startsWith('explain_or_answer:')) {
+        const imageUrl = truncatedMessage.replace('explain_or_answer:', '');
         apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(imageUrl)}&uid=${senderId}`;
-      } else if (userMessage.startsWith('process_file:')) {
-        const fileUrl = userMessage.replace('process_file:', '');
+      } else if (truncatedMessage.startsWith('process_file:')) {
+        const fileUrl = truncatedMessage.replace('process_file:', '');
         apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(fileUrl)}&uid=${senderId}`;
       } else {
-        apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&uid=${senderId}`;
+        apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(truncatedMessage)}&uid=${senderId}`;
       }
 
       // Fetch the response from the API
@@ -54,7 +60,13 @@ module.exports = {
       }
     } catch (error) {
       console.error('Error processing AI request:', error);
-      await sendMessage(senderId, { text: 'Request timeout: please try again. If this persists, you can contact my admin: https://www.facebook.com/valneer.2024' }, pageAccessToken);
+
+      // Send error message to the user
+      const errorMessage = error.response?.status === 500
+        ? 'The server encountered an error. Please try again later.'
+        : 'Request timeout: please try again. If this persists, you can contact my admin: https://www.facebook.com/valneer.2024';
+
+      await sendMessage(senderId, { text: errorMessage }, pageAccessToken);
     }
   },
 };
