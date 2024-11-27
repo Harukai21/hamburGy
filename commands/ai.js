@@ -16,29 +16,22 @@ module.exports = {
     let apiUrl;
 
     try {
-      // Handle long prompts by truncating them
-      const maxPromptLength = 2000; // Set a limit for the prompt length
-      const truncatedMessage = userMessage.length > maxPromptLength 
-        ? userMessage.slice(0, maxPromptLength) 
-        : userMessage;
-
-      // Construct the API URL based on the command
-      if (truncatedMessage.startsWith('explain_or_answer:')) {
-        const imageUrl = truncatedMessage.replace('explain_or_answer:', '');
+      // Detect and handle image or document recognition commands
+      if (userMessage.startsWith('explain_or_answer:')) {
+        const imageUrl = userMessage.replace('explain_or_answer:', '');
         apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(imageUrl)}&uid=${senderId}`;
-      } else if (truncatedMessage.startsWith('process_file:')) {
-        const fileUrl = truncatedMessage.replace('process_file:', '');
+      } else if (userMessage.startsWith('process_file:')) {
+        const fileUrl = userMessage.replace('process_file:', '');
         apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(fileUrl)}&uid=${senderId}`;
       } else {
-        apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(truncatedMessage)}&uid=${senderId}`;
+        apiUrl = `https://vneerapi.onrender.com/bot?prompt=${encodeURIComponent(userMessage)}&uid=${senderId}`;
       }
 
-      // Fetch the response from the API
       const response = await axios.get(apiUrl);
       let message = response.data.message || 'No response from the API';
       const generatedImageUrl = response.data.img_urls?.[0];
 
-      // Clean up the response text
+      // Clean up response text
       message = message.replace(/generateImage\s*\n*/gi, '')
                        .replace(/browseWeb\s*\n*/gi, '')
                        .replace(/analyzeImage\s*\n*/gi, '')
@@ -49,8 +42,13 @@ module.exports = {
                        .replace(/!\[.*?\]\(.*?\)/g, '')
                        .trim();
 
-      // Send the response text in chunks
-      await sendChunks(senderId, message, pageAccessToken, sendMessage);
+      const maxMessageLength = 2000;
+      const messages = splitMessageIntoChunks(message, maxMessageLength);
+
+      // Send response message in chunks sequentially
+      for (const chunk of messages) {
+        await sendMessage(senderId, { text: chunk }, pageAccessToken);
+      }
 
       // Send generated image if available
       if (generatedImageUrl) {
@@ -60,33 +58,12 @@ module.exports = {
       }
     } catch (error) {
       console.error('Error processing AI request:', error);
-
-      // Send error message to the user
-      const errorMessage = error.response?.status === 500
-        ? 'The server encountered an error. Please try again later.'
-        : 'Request timeout: please try again. If this persists, you can contact my admin: https://www.facebook.com/valneer.2024';
-
-      await sendMessage(senderId, { text: errorMessage }, pageAccessToken);
+      await sendMessage(senderId, { text: 'Request timeout: please try again. If this persists, you can contact my admin: https://www.facebook.com/valneer.2024' }, pageAccessToken);
     }
   },
 };
 
-// Function to send text in chunks
-async function sendChunks(senderId, text, pageAccessToken, sendMessage) {
-  const maxMessageLength = 2000; // Define the maximum message length
-  const chunks = splitMessageIntoChunks(text, maxMessageLength);
-
-  for (const chunk of chunks) {
-    try {
-      await sendMessage(senderId, { text: chunk }, pageAccessToken);
-    } catch (error) {
-      console.error('Error sending message chunk:', error);
-      throw new Error('Failed to send message chunk');
-    }
-  }
-}
-
-// Function to split text into manageable chunks
+// Function to split text into chunks
 function splitMessageIntoChunks(text, maxLength) {
   const chunks = [];
   let start = 0;
