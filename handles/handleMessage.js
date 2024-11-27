@@ -29,6 +29,7 @@ async function setTypingIndicator(senderId, pageAccessToken, action = 'typing_on
       await new Promise(resolve => setTimeout(resolve, 1000));
       await setTypingIndicator(senderId, pageAccessToken, action, retries - 1);
     }
+    // Fail silently for "ai" execution to ensure it proceeds even if typing indicator fails
   }
 }
 
@@ -167,7 +168,12 @@ async function handleMessage(event, pageAccessToken) {
       } else {
         const aiCommand = commands.get('ai');
         if (aiCommand) {
-          await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
+          // Ensure "ai" command is executed even if typing indicator fails
+          try {
+            await aiCommand.execute(senderId, messageText, pageAccessToken, sendMessage);
+          } catch (error) {
+            console.error(`Error executing "ai" command:`, error);
+          }
         }
       }
     }
