@@ -29,25 +29,28 @@ module.exports = {
       }
 
       const hdLink = videoData.links["720p (HD)"];
-      const proxyUrl = `https://vneerapi.onrender.com/stream?url=${encodeURIComponent(hdLink)}&filename=video.mp4`;
+      const proxyUrl = `https://vneerapi.onrender.com/stream?url=${encodeURIComponent(hdLink)}`;
 
       console.log(`Passing HD link to proxy: ${hdLink}`);
       console.log(`Proxy URL generated: ${proxyUrl}`);
 
-      // Test the proxy server
-      const proxyResponse = await axios.get(proxyUrl, { validateStatus: false });
-      console.log("Response from proxy server:", {
-        status: proxyResponse.status,
-        headers: proxyResponse.headers,
-        dataSnippet: proxyResponse.data ? proxyResponse.data.toString().substring(0, 100) : null, // Log the first 100 characters of the response
-      });
+      // Fetch the stream API to get the download link
+      const streamResponse = await axios.get(proxyUrl);
+      console.log("Response from stream API:", streamResponse.data);
 
-      // Send the video as an attachment via the proxied URL
+      if (!streamResponse.data || !streamResponse.data.link) {
+        console.error("Failed to generate download link from stream API.");
+        return sendMessage(senderId, { text: "An error occurred while generating the video link." }, pageAccessToken);
+      }
+
+      const downloadLink = streamResponse.data.link;
+
+      // Send the video as an attachment via the download link
       sendMessage(senderId, {
         attachment: {
           type: 'video',
           payload: {
-            url: proxyUrl,
+            url: downloadLink,
             is_reusable: true,
           },
         },
