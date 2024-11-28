@@ -45,7 +45,7 @@ module.exports = {
       // Send the video as an attachment via the proxied URL
       sendMessage(senderId, {
         attachment: {
-          type: 'file',
+          type: 'video',
           payload: {
             url: proxyUrl,
             is_reusable: true,
