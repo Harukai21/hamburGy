@@ -27,14 +27,14 @@ module.exports = {
       }
 
       const hdLink = videoData.links["720p (HD)"];
-      const proxyUrl = `https://vneerapi.onrender.com/stream?url=${encodeURIComponent(hdLink)}`;
+      const proxyUrl = `https://vneerapi.onrender.com/stream?url=${encodeURIComponent(hdLink)}&filename=video.mp4`;
 
       console.log(`Sending proxied video: ${proxyUrl}`);
 
       // Send the video as an attachment via the proxied URL
       sendMessage(senderId, {
         attachment: {
-          type: 'video',
+          type: 'file',
           payload: {
             url: proxyUrl,
             is_reusable: true,
