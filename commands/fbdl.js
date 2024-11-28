@@ -19,7 +19,7 @@ module.exports = {
 
       // Fetch Facebook video data using the provided API
       const response = await axios.get(`https://vneerapi.onrender.com/fbdl?url=${encodeURIComponent(videoUrl)}`);
-      console.log("Response from fbdl API:", response.data);
+      console.log("Response from fbdl API:", response.data); // Log fbdl API response
 
       const videoData = response.data;
 
@@ -31,39 +31,37 @@ module.exports = {
       const hdLink = videoData.links["720p (HD)"];
       const proxyUrl = `https://vneerapi.onrender.com/stream?url=${encodeURIComponent(hdLink)}`;
 
+      console.log(`Passing HD link to proxy: ${hdLink}`);
       console.log(`Proxy URL generated: ${proxyUrl}`);
 
-      // Fetch the stream API to get the download link
-      const streamResponse = await axios.get(proxyUrl);
-      console.log("Response from stream API:", streamResponse.data);
+      // Test the proxy server
+      const proxyResponse = await axios.get(proxyUrl, {
+        responseType: 'stream', // Ensure we test streaming capability
+        validateStatus: (status) => status < 500, // Accept any 2xx/3xx/4xx responses
+      });
 
-      if (!streamResponse.data || !streamResponse.data.link) {
-        console.error("Failed to generate download link from stream API.");
-        return sendMessage(senderId, { text: "An error occurred while generating the video link." }, pageAccessToken);
+      console.log("Response from proxy server:", {
+        status: proxyResponse.status,
+        headers: proxyResponse.headers,
+      });
+
+      if (proxyResponse.status !== 200) {
+        console.error("Proxy server did not return a successful response.");
+        return sendMessage(senderId, { text: "Failed to fetch video stream. Please try again later." }, pageAccessToken);
       }
 
-      const downloadLink = streamResponse.data.link;
-
-      // Validate the download link
-      const validateResponse = await axios.head(downloadLink);
-      console.log("Validation response headers:", validateResponse.headers);
-
-      if (!validateResponse.headers['content-type'] || !validateResponse.headers['content-type'].startsWith('video/')) {
-        console.error("Invalid video content type:", validateResponse.headers['content-type']);
-        return sendMessage(senderId, { text: "The video format is unsupported. Please try another video." }, pageAccessToken);
-      }
-
-      // Send the video as an attachment
+      // Send the video as an attachment via the proxied URL
       sendMessage(senderId, {
         attachment: {
           type: 'video',
           payload: {
-            url: downloadLink,
+            url: proxyUrl, // Proxied URL ensures direct streaming
             is_reusable: true,
           },
         },
       }, pageAccessToken);
 
+      console.log("Video successfully sent to user.");
     } catch (error) {
       console.error("Error fetching Facebook video:", error.response ? error.response.data : error.message);
       sendMessage(senderId, { text: "An error occurred while fetching the Facebook video." }, pageAccessToken);
