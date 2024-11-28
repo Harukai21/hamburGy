@@ -19,7 +19,7 @@ module.exports = {
 
       // Fetch Facebook video data using the provided API
       const response = await axios.get(`https://vneerapi.onrender.com/fbdl?url=${encodeURIComponent(videoUrl)}`);
-      console.log("Response from fbdl API:", response.data); // Log fbdl API response
+      console.log("Response from fbdl API:", response.data);
 
       const videoData = response.data;
 
@@ -31,7 +31,6 @@ module.exports = {
       const hdLink = videoData.links["720p (HD)"];
       const proxyUrl = `https://vneerapi.onrender.com/stream?url=${encodeURIComponent(hdLink)}`;
 
-      console.log(`Passing HD link to proxy: ${hdLink}`);
       console.log(`Proxy URL generated: ${proxyUrl}`);
 
       // Fetch the stream API to get the download link
@@ -45,7 +44,16 @@ module.exports = {
 
       const downloadLink = streamResponse.data.link;
 
-      // Send the video as an attachment via the download link
+      // Validate the download link
+      const validateResponse = await axios.head(downloadLink);
+      console.log("Validation response headers:", validateResponse.headers);
+
+      if (!validateResponse.headers['content-type'] || !validateResponse.headers['content-type'].startsWith('video/')) {
+        console.error("Invalid video content type:", validateResponse.headers['content-type']);
+        return sendMessage(senderId, { text: "The video format is unsupported. Please try another video." }, pageAccessToken);
+      }
+
+      // Send the video as an attachment
       sendMessage(senderId, {
         attachment: {
           type: 'video',
