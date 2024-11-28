@@ -1,7 +1,4 @@
 const axios = require('axios');
-const FormData = require('form-data');
-const fs = require('fs');
-const https = require('https');
 
 module.exports = {
   name: "fbdl",
@@ -19,6 +16,8 @@ module.exports = {
 
     try {
       console.log(`Fetching Facebook video data for URL: ${videoUrl}`);
+
+      // Fetch Facebook video data using the provided API
       const response = await axios.get(`https://vneerapi.onrender.com/fbdl?url=${encodeURIComponent(videoUrl)}`);
       const videoData = response.data;
 
@@ -28,48 +27,22 @@ module.exports = {
       }
 
       const hdLink = videoData.links["720p (HD)"];
-      console.log(`Downloading video from: ${hdLink}`);
+      const proxyUrl = `https://vneerapi.onrender.com/stream?url=${encodeURIComponent(hdLink)}`;
 
-      // Download the video file temporarily
-      const tempFilePath = '/tmp/video.mp4';
-      const file = fs.createWriteStream(tempFilePath);
+      console.log(`Sending proxied video: ${proxyUrl}`);
 
-      https.get(hdLink, function (response) {
-        response.pipe(file);
-        file.on('finish', async () => {
-          file.close();
-
-          // Upload video to Facebook
-          const formData = new FormData();
-          formData.append('filedata', fs.createReadStream(tempFilePath));
-
-          const uploadResponse = await axios.post(
-            `https://graph.facebook.com/v17.0/me/message_attachments?access_token=${pageAccessToken}`,
-            formData,
-            { headers: formData.getHeaders() }
-          );
-
-          const attachmentId = uploadResponse.data.attachment_id;
-
-          console.log(`Uploaded video. Attachment ID: ${attachmentId}`);
-
-          // Send the video to the user
-          sendMessage(senderId, {
-            attachment: {
-              type: 'video',
-              payload: { attachment_id: attachmentId },
-            },
-          }, pageAccessToken);
-
-          // Cleanup the temporary file
-          fs.unlinkSync(tempFilePath);
-        });
-      }).on('error', (error) => {
-        console.error("Error downloading video:", error);
-        sendMessage(senderId, { text: "An error occurred while downloading the video." }, pageAccessToken);
-      });
+      // Send the video as an attachment via the proxied URL
+      sendMessage(senderId, {
+        attachment: {
+          type: 'video',
+          payload: {
+            url: proxyUrl,
+            is_reusable: true,
+          },
+        },
+      }, pageAccessToken);
     } catch (error) {
-      console.error("Error processing request:", error);
+      console.error("Error fetching Facebook video:", error);
       sendMessage(senderId, { text: "An error occurred while fetching the Facebook video." }, pageAccessToken);
     }
   },
