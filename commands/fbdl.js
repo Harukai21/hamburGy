@@ -3,7 +3,7 @@ const axios = require('axios');
 module.exports = {
   name: "fbdl",
   description: "Downloads video from Facebook",
-  usage: '/fbdl <url>',
+  usage: "/fbdl <url>",
   author: "Biru",
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
@@ -11,55 +11,73 @@ module.exports = {
 
     if (!videoUrl) {
       console.error("No video URL provided.");
-      return sendMessage(senderId, { text: "Please provide a valid Facebook video URL." }, pageAccessToken);
+      return sendMessage(
+        senderId,
+        { text: "Please provide a valid Facebook video URL." },
+        pageAccessToken
+      );
     }
 
     try {
       console.log(`Fetching Facebook video data for URL: ${videoUrl}`);
 
-      // Fetch Facebook video data using the provided API
-      const response = await axios.get(`https://vneerapi.onrender.com/fbdl?url=${encodeURIComponent(videoUrl)}`);
+      // Fetch Facebook video data using the API
+      const response = await axios.get(`https://vneerapi.onrender.com/fbdl2?url=${encodeURIComponent(videoUrl)}`);
       console.log("Response from fbdl API:", response.data);
 
       const videoData = response.data;
 
-      if (!videoData || !videoData.links || !videoData.links["720p (HD)"]) {
-        console.error(`HD video not available for URL: ${videoUrl}`);
-        return sendMessage(senderId, { text: "HD video not available. Please try another video." }, pageAccessToken);
+      if (!videoData || !videoData.downloadLinks || videoData.downloadLinks.length === 0) {
+        console.error(`No video links available for URL: ${videoUrl}`);
+        return sendMessage(
+          senderId,
+          { text: "No downloadable video links found. Please try another video." },
+          pageAccessToken
+        );
       }
 
-      const hdLink = videoData.links["720p (HD)"];
-      const proxyUrl = `https://vneerapi.onrender.com/stream?url=${encodeURIComponent(hdLink)}`;
+      // Select the best available video quality
+      let downloadLink = null;
+      let quality = null;
 
-      console.log(`Passing HD link to proxy: ${hdLink}`);
-      console.log(`Proxy URL generated: ${proxyUrl}`);
-
-      // Validate the proxy URL
-      const proxyResponse = await axios.head(proxyUrl, { validateStatus: false });
-      console.log("Response from proxy server:", {
-        status: proxyResponse.status,
-        headers: proxyResponse.headers,
-      });
-
-      if (proxyResponse.status !== 200) {
-        console.error("Proxy server did not return a successful response.");
-        return sendMessage(senderId, { text: "Failed to fetch video stream. Please try again later." }, pageAccessToken);
+      for (const link of videoData.downloadLinks) {
+        if (link.quality === "720p(HD)") {
+          downloadLink = link.downloadLink;
+          quality = link.quality;
+          break;
+        }
       }
+
+      // Fallback to any available quality
+      if (!downloadLink) {
+        downloadLink = videoData.downloadLinks[0].downloadLink;
+        quality = videoData.downloadLinks[0].quality;
+      }
+
+      console.log(`Selected video quality: ${quality}, Link: ${downloadLink}`);
 
       // Send the video as an attachment
-      sendMessage(senderId, {
-        attachment: {
-          type: 'video', // Correct type for Messenger API
-          payload: {
-            url: proxyUrl, // Video URL must be publicly accessible
+      await sendMessage(
+        senderId,
+        {
+          attachment: {
+            type: "video",
+            payload: {
+              url: downloadLink,
+            },
           },
         },
-      }, pageAccessToken);
+        pageAccessToken
+      );
 
       console.log("Video successfully sent to user.");
     } catch (error) {
       console.error("Error fetching Facebook video:", error.response ? error.response.data : error.message);
-      sendMessage(senderId, { text: "An error occurred while fetching the Facebook video." }, pageAccessToken);
+      sendMessage(
+        senderId,
+        { text: "An error occurred while fetching the Facebook video. Please try again later." },
+        pageAccessToken
+      );
     }
   },
 };
