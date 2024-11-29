@@ -26,7 +26,7 @@
     "globalsprak": "^1.0.7",
     "groq-sdk": "^0.6.1",
     "llyrics": "^1.1.7",
-    "nayan-media-downloader": "^2.6.3",
+    
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
     "prodia.js": "^3.0.0",
