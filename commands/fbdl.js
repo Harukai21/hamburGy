@@ -22,7 +22,7 @@ module.exports = {
       console.log(`Fetching Facebook video data for URL: ${videoUrl}`);
 
       // Fetch Facebook video data using the API
-      const response = await axios.get(`https://vneerapi.onrender.com/fbdl2?url=${encodeURIComponent(videoUrl)}`);
+      const response = await axios.get(`https://vneerapi.onrender.com/fbdl3?url=${encodeURIComponent(videoUrl)}`);
       console.log("Response from fbdl API:", response.data);
 
       const videoData = response.data;
@@ -41,14 +41,14 @@ module.exports = {
       let quality = null;
 
       for (const link of videoData.downloadLinks) {
-        if (link.quality === "720p(HD)") {
+        if (link.quality.includes("360p")) { // Prefer 360p quality
           downloadLink = link.downloadLink;
           quality = link.quality;
           break;
         }
       }
 
-      // Fallback to any available quality
+      // Fallback to the first available quality
       if (!downloadLink) {
         downloadLink = videoData.downloadLinks[0].downloadLink;
         quality = videoData.downloadLinks[0].quality;
@@ -56,7 +56,7 @@ module.exports = {
 
       console.log(`Selected video quality: ${quality}, Link: ${downloadLink}`);
 
-      // Send the video as an attachment
+      // Force sending the video as an attachment
       await sendMessage(
         senderId,
         {
