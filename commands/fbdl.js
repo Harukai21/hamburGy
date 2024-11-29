@@ -16,36 +16,37 @@ module.exports = {
     }
 
     try {
-      console.log(`Fetching Facebook video for URL: ${url}`);
-      
-      // Fetch Facebook video data using the provided API
-      const response = await axios.get(`https://vneerapi.onrender.com/fbdl3?url=${encodeURIComponent(url)}`);
-      const videoData = response.data;
+  console.log(`Fetching Facebook video for URL: ${url}`);
+  const response = await axios.get(`https://vneerapi.onrender.com/fbdl3?url=${encodeURIComponent(url)}`);
+  const videoData = response.data;
 
-      if (!videoData || !videoData.downloadLink) {
-        console.error(`No results found for: ${url}`);
-        return sendMessage(senderId, { text: "No results found. Please try again with a different URL." }, pageAccessToken);
+  if (!videoData || !videoData.downloadLink) {
+    console.error(`No results found for: ${url}`);
+    return sendMessage(senderId, { text: "No results found. Please try again with a different URL." }, pageAccessToken);
+  }
+
+  // Validate file size
+  const { headers } = await axios.head(videoData.downloadLink);
+  const fileSize = parseInt(headers['content-length'], 10);
+  if (fileSize > 25 * 1024 * 1024) {
+    return sendMessage(senderId, { text: "The video is too large to send via Messenger." }, pageAccessToken);
+  }
+
+  // Send the video
+  sendMessage(senderId, {
+    attachment: {
+      type: 'video',
+      payload: {
+        url: videoData.downloadLink,
+        is_reusable: true
       }
+    }
+  }, pageAccessToken);
 
-      // Notify the user with the video quality
-      console.log(`Found video with quality: ${videoData.quality}`);
-      sendMessage(senderId, { text: `Video quality: ${videoData.quality}` }, pageAccessToken);
-
-      // Send the video file using the downloadLink
-      sendMessage(senderId, {
-        attachment: {
-          type: 'video',
-          payload: {
-            url: videoData.downloadLink,
-            is_reusable: true
-          }
-        }
-      }, pageAccessToken);
-
-    } catch (error) {
-      // Log and handle any errors that occur during the request or processing
-      console.error("Error fetching Facebook video:", error);
-      sendMessage(senderId, { text: "An error occurred while fetching the Facebook video." }, pageAccessToken);
+} catch (error) {
+  console.error("Error fetching Facebook video:", error);
+  sendMessage(senderId, { text: "An error occurred while fetching the Facebook video." }, pageAccessToken);
+   
     }
   }
 };
