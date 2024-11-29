@@ -7,46 +7,58 @@ module.exports = {
   author: "Biru",
 
   async execute(senderId, args, pageAccessToken, sendMessage) {
-    const url = args[0];
+    const videoUrl = args.join(" ");
     
-    // If there's no URL provided, respond with a message
-    if (!url) {
-      console.error("No URL provided.");
-      return sendMessage(senderId, { text: "Please provide a Facebook video URL." }, pageAccessToken);
+    // If no video URL is provided, respond with a message
+    if (!videoUrl) {
+      console.error("No video URL provided.");
+      return sendMessage(senderId, { text: "Please provide a valid Facebook video URL." }, pageAccessToken);
     }
 
     try {
-  console.log(`Fetching Facebook video for URL: ${url}`);
-  const response = await axios.get(`https://vneerapi.onrender.com/fbdl3?url=${encodeURIComponent(url)}`);
-  const videoData = response.data;
+      console.log(`Fetching Facebook video from: ${videoUrl}`);
+      
+      // Fetch Facebook video data using the provided API
+      const response = await axios.get(`https://vneerapi.onrender.com/fbdl4?url=${encodeURIComponent(videoUrl)}`);
+      const videoData = response.data;
 
-  if (!videoData || !videoData.downloadLink) {
-    console.error(`No results found for: ${url}`);
-    return sendMessage(senderId, { text: "No results found. Please try again with a different URL." }, pageAccessToken);
-  }
-
-  // Validate file size
-  const { headers } = await axios.head(videoData.downloadLink);
-  const fileSize = parseInt(headers['content-length'], 10);
-  if (fileSize > 25 * 1024 * 1024) {
-    return sendMessage(senderId, { text: "The video is too large to send via Messenger." }, pageAccessToken);
-  }
-
-  // Send the video
-  sendMessage(senderId, {
-    attachment: {
-      type: 'video',
-      payload: {
-        url: videoData.downloadLink,
-        is_reusable: true
+      if (!videoData || !videoData.resolutions) {
+        console.error(`No video data found for URL: ${videoUrl}`);
+        return sendMessage(senderId, { text: "No video found. Please check the URL and try again." }, pageAccessToken);
       }
-    }
-  }, pageAccessToken);
 
-} catch (error) {
-  console.error("Error fetching Facebook video:", error);
-  sendMessage(senderId, { text: "An error occurred while fetching the Facebook video." }, pageAccessToken);
-   
+      // Notify the user with the title of the video
+      console.log(`Found video: ${videoData.title}`);
+      sendMessage(senderId, { text: `Title: ${videoData.title}` }, pageAccessToken);
+
+      // Send the video thumbnail to the user
+      sendMessage(senderId, {
+        attachment: {
+          type: 'image',
+          payload: {
+            url: videoData.thumbnail,
+            is_reusable: true
+          }
+        }
+      }, pageAccessToken);
+
+      // Send the video in HD or fallback to SD if HD is unavailable
+      const videoUrlToSend = videoData.resolutions.HD || videoData.resolutions.SD;
+
+      sendMessage(senderId, {
+        attachment: {
+          type: 'video',
+          payload: {
+            url: videoUrlToSend,
+            is_reusable: true
+          }
+        }
+      }, pageAccessToken);
+
+    } catch (error) {
+      // Log and handle any errors that occur during the request or processing
+      console.error("Error fetching Facebook video:", error);
+      sendMessage(senderId, { text: "An error occurred while fetching the Facebook video." }, pageAccessToken);
     }
   }
 };
