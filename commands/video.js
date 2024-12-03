@@ -5,7 +5,7 @@ module.exports = {
   name: 'Video',
   description: 'Fetch and search for videos or images',
   author: 'Aljur Pogoy',
-  usage: '/video title'
+  usage: '/video title',
   
   async execute(senderId, args, pageAccessToken) {
     const query = args.join(' ');
