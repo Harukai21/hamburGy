@@ -1,128 +1,96 @@
-const { Client } = require("youtubei");
-const { ytdown } = require("nayan-media-downloader");
 const axios = require('axios');
-const fs = require('fs-extra');
-const path = require('path');
-const ffmpeg = require('fluent-ffmpeg');
-
-const youtube = new Client();
-const TEMP_DIR = '/tmp'; // Adjust to Render's temporary storage
+const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-  name: "video",
-  description: "Downloads and trims video (if over 25 MB) from YouTube",
-  usage: '/video <videoTitle>',
-  author: "Biru",
-
-  async execute(senderId, args, pageAccessToken, sendMessage) {
-    const searchQuery = args.join(" ");
+  name: 'Video',
+  description: 'Fetch image and video search',
+  author: 'Aljur Pogoy',
+  usage: '/video <query>'
     
-    if (!searchQuery) {
-      console.error("No search query provided.");
-      return sendMessage(senderId, { text: "Please provide a search keyword." }, pageAccessToken);
+  async execute(senderId, args, pageAccessToken) {
+    const query = args.join(' ');
+
+    if (!query) {
+      return sendMessage(senderId, { text: 'Veuillez entrer un terme de recherche.' }, pageAccessToken);
     }
 
     try {
-      console.log(`Searching YouTube for: ${searchQuery}`);
-      const searchResults = await youtube.search(searchQuery, { type: "video" });
-      
-      if (!searchResults.items.length) {
-        console.error(`No results found for: ${searchQuery}`);
-        return sendMessage(senderId, { text: "No results found. Please try again with a different keyword." }, pageAccessToken);
+      const response = await axios.get(`https://me0xn4hy3i.execute-api.us-east-1.amazonaws.com/staging/api/resolve/resolveYoutubeSearch?search=${encodeURIComponent(query)}`);
+      const videos = response.data.data;
+
+      if (!videos || videos.length === 0) {
+        return sendMessage(senderId, { text: 'Aucune vidéo trouvée.' }, pageAccessToken);
       }
 
-      const video = searchResults.items[0];
-      const videoId = video.id?.videoId || video.id;
+      // Limiter le nombre de vidéos à 10
+      const limitedVideos = videos.slice(0, 10);
       
-      console.log(`Downloading video: ${video.title}`);
-      sendMessage(senderId, { text: `Downloading "${video.title}"...` }, pageAccessToken);
-
-      try {
-        const videoInfo = await ytdown(`https://youtu.be/${videoId}`);
-
-        if (videoInfo.status) {
-          const videoData = videoInfo.data;
-          const videoDownloadUrl = videoData.video;
-          const videoPath = path.join(TEMP_DIR, `${videoId}.mp4`);
-
-          const response = await axios({
-            url: videoDownloadUrl,
-            method: 'GET',
-            responseType: 'stream'
-          });
-
-          const writer = fs.createWriteStream(videoPath);
-          response.data.pipe(writer);
-          await new Promise((resolve, reject) => {
-            writer.on('finish', resolve);
-            writer.on('error', reject);
-          });
-
-          const fileSizeInMB = fs.statSync(videoPath).size / (1024 * 1024);
-          if (fileSizeInMB <= 25) {
-            await sendVideo(senderId, videoPath, pageAccessToken, sendMessage);
-          } else {
-            await splitAndSendVideo(senderId, videoPath, pageAccessToken, sendMessage);
+      const videoMessages = limitedVideos.map(video => ({
+        title: video.title,
+        buttons: [
+          {
+            type: 'postback',
+            title: 'Regarder',
+            payload: `WATCH_${video.videoId}`
+          },
+          {
+            type: 'postback',
+            title: 'Télécharger',
+            payload: `DOWNLOAD_${video.videoId}`
           }
+        ],
+        image: video.imgSrc,
+        text: `Durée: ${video.duration}\nVues: ${video.views}`
+      }));
 
-          fs.unlinkSync(videoPath); // Clean up original file after processing
+      const message = videoMessages.map(video => ({
+        title: video.title,
+        image_url: video.image,
+        subtitle: video.text,
+        buttons: video.buttons
+      }));
 
-        } else {
-          console.error(`Failed to download video: ${video.title}`);
-          sendMessage(senderId, { text: "Failed to download the video." }, pageAccessToken);
+      sendMessage(senderId, {
+        attachment: {
+          type: 'template',
+          payload: {
+            template_type: 'generic',
+            elements: message
+          }
         }
-
-      } catch (error) {
-        console.error("Download Error:", error);
-        sendMessage(senderId, { text: "An error occurred while trying to download the video." }, pageAccessToken);
-      }
-
+      }, pageAccessToken);
+      
     } catch (error) {
-      console.error("Search Error:", error);
-      sendMessage(senderId, { text: "An error occurred while searching for the video." }, pageAccessToken);
+      console.error('Error fetching video data:', error);
+      sendMessage(senderId, { text: 'Erreur lors de la recherche des vidéos.' }, pageAccessToken);
+    }
+  },
+  async handlePostback(senderId, payload, pageAccessToken) {
+    const [action, videoId] = payload.split('_');
+
+    if (action === 'WATCH') {
+      // Logique pour envoyer la vidéo
+      const videoUrl = `https://example.com/videos/${videoId}.mp4`; // Remplacez par l'URL réelle
+      sendMessage(senderId, {
+        attachment: {
+          type: 'video',
+          payload: {
+            url: videoUrl
+          }
+        }
+      }, pageAccessToken);
+    } else if (action === 'DOWNLOAD') {
+      // Logique pour envoyer le fichier .mp4
+      const videoFilePath = `path/to/videos/${videoId}.mp4`; // Remplacez par le chemin réel
+      sendMessage(senderId, {
+        attachment: {
+          type: 'file',
+          payload: {
+            url: videoFilePath,
+            is_reusable: true
+          }
+        }
+      }, pageAccessToken);
     }
   }
 };
-
-// Helper function to send video and wait until the send completes
-async function sendVideo(senderId, filePath, pageAccessToken, sendMessage) {
-  return new Promise((resolve, reject) => {
-    const videoData = fs.createReadStream(filePath);
-    sendMessage(senderId, {
-      attachment: {
-        type: 'video',
-        payload: {
-          is_reusable: true,
-        }
-      },
-      filedata: videoData
-    }, pageAccessToken, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
-// Helper function to split video into parts under 25 MB and send each sequentially
-async function splitAndSendVideo(senderId, videoPath, pageAccessToken, sendMessage) {
-  const partDir = path.join(TEMP_DIR, `video_parts_${Date.now()}`);
-  fs.mkdirSync(partDir);
-  
-  await new Promise((resolve, reject) => {
-    ffmpeg(videoPath)
-      .outputOptions('-fs', '25M') // Split video into parts under 25 MB
-      .on('end', resolve)
-      .on('error', reject)
-      .output(path.join(partDir, 'part_%03d.mp4'))
-      .run();
-  });
-
-  const parts = fs.readdirSync(partDir).sort();
-  for (const part of parts) {
-    const partPath = path.join(partDir, part);
-    await sendVideo(senderId, partPath, pageAccessToken, sendMessage); // Ensure each part is sent
-    fs.unlinkSync(partPath); // Delete part only after sending
-  }
-
-  fs.rmdirSync(partDir); // Remove the part directory
-}
