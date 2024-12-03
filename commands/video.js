@@ -3,15 +3,15 @@ const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
   name: 'Video',
-  description: 'Fetch image and video search',
+  description: 'Fetch and search for videos or images',
   author: 'Aljur Pogoy',
-  usage: '/video <title>'
+  usage: '/video title'
   
   async execute(senderId, args, pageAccessToken) {
     const query = args.join(' ');
 
     if (!query) {
-      return sendMessage(senderId, { text: 'Veuillez entrer un terme de recherche.' }, pageAccessToken);
+      return sendMessage(senderId, { text: 'Please enter a search term.' }, pageAccessToken);
     }
 
     try {
@@ -19,10 +19,10 @@ module.exports = {
       const videos = response.data.data;
 
       if (!videos || videos.length === 0) {
-        return sendMessage(senderId, { text: 'Aucune vidéo trouvée.' }, pageAccessToken);
+        return sendMessage(senderId, { text: 'No videos found.' }, pageAccessToken);
       }
 
-      // Limiter le nombre de vidéos à 10
+      // Limit the number of videos to 10
       const limitedVideos = videos.slice(0, 10);
       
       const videoMessages = limitedVideos.map(video => ({
@@ -30,17 +30,17 @@ module.exports = {
         buttons: [
           {
             type: 'postback',
-            title: 'Regarder',
+            title: 'Watch',
             payload: `WATCH_${video.videoId}`
           },
           {
             type: 'postback',
-            title: 'Télécharger',
+            title: 'Download',
             payload: `DOWNLOAD_${video.videoId}`
           }
         ],
         image: video.imgSrc,
-        text: `Durée: ${video.duration}\nVues: ${video.views}`
+        text: `Duration: ${video.duration}\nViews: ${video.views}`
       }));
 
       const message = videoMessages.map(video => ({
@@ -62,15 +62,15 @@ module.exports = {
       
     } catch (error) {
       console.error('Error fetching video data:', error);
-      sendMessage(senderId, { text: 'Erreur lors de la recherche des vidéos.' }, pageAccessToken);
+      sendMessage(senderId, { text: 'An error occurred while searching for videos.' }, pageAccessToken);
     }
   },
   async handlePostback(senderId, payload, pageAccessToken) {
     const [action, videoId] = payload.split('_');
 
     if (action === 'WATCH') {
-      // Logique pour envoyer la vidéo
-      const videoUrl = `https://example.com/videos/${videoId}.mp4`; // Remplacez par l'URL réelle
+      // Logic to send the video
+      const videoUrl = `https://example.com/videos/${videoId}.mp4`; // Replace with the actual URL
       sendMessage(senderId, {
         attachment: {
           type: 'video',
@@ -80,8 +80,8 @@ module.exports = {
         }
       }, pageAccessToken);
     } else if (action === 'DOWNLOAD') {
-      // Logique pour envoyer le fichier .mp4
-      const videoFilePath = `path/to/videos/${videoId}.mp4`; // Remplacez par le chemin réel
+      // Logic to send the .mp4 file
+      const videoFilePath = `path/to/videos/${videoId}.mp4`; // Replace with the actual path
       sendMessage(senderId, {
         attachment: {
           type: 'file',
