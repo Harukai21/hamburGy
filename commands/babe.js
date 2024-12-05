@@ -42,6 +42,7 @@ module.exports = {
       "previewToken": null,
       "userId": senderId, // User ID for personalization
       "codeModelMode": true,
+      "userSelectedModel: "blackboxai-pro",
       "agentMode": {
         "mode": true,
         "id": "BabeOB4l1nK",
